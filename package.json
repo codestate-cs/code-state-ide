@@ -1,0 +1,208 @@
+{
+  "name": "codestate-ide",
+  "displayName": "CodeState IDE",
+  "description": "Save and restore your VS Code development sessions with full context",
+  "icon": "Frame.png",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.102.0"
+  },
+  "categories": [
+    "Other",
+    "Developer Tools"
+  ],
+  "keywords": [
+    "session",
+    "context",
+    "productivity",
+    "development",
+    "workspace"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "codestate.saveSession",
+        "title": "CodeState: Save Session",
+        "category": "CodeState"
+      },
+      {
+        "command": "codestate.resumeSession",
+        "title": "CodeState: Resume Session",
+        "category": "CodeState"
+      },
+      {
+        "command": "codestate.listSessions",
+        "title": "CodeState: List Sessions",
+        "category": "CodeState"
+      },
+      {
+        "command": "codestate.deleteSession",
+        "title": "CodeState: Delete Session",
+        "category": "CodeState"
+      },
+      {
+        "command": "codestate.refreshConfig",
+        "title": "CodeState: Refresh Config",
+        "category": "CodeState"
+      },
+      {
+        "command": "codestate.editConfig",
+        "title": "CodeState: Edit Configuration",
+        "category": "CodeState"
+      },
+      {
+        "command": "codestate.refreshSessions",
+        "title": "CodeState: Refresh Sessions",
+        "category": "CodeState"
+      },
+
+      {
+        "command": "codestate.session.resume",
+        "title": "CodeState: Resume Session",
+        "category": "CodeState"
+      },
+      {
+        "command": "codestate.session.rename",
+        "title": "CodeState: Rename Session",
+        "category": "CodeState"
+      },
+
+      {
+        "command": "codestate.script.add",
+        "title": "CodeState: Add Script",
+        "category": "CodeState"
+      },
+      {
+        "command": "codestate.file.open",
+        "title": "CodeState: Open File",
+        "category": "CodeState"
+      },
+      {
+        "command": "codestate.file.copyPath",
+        "title": "CodeState: Copy File Path",
+        "category": "CodeState"
+      },
+      {
+        "command": "codestate.file.removeFromSession",
+        "title": "CodeState: Remove File from Session",
+        "category": "CodeState"
+      },
+      {
+        "command": "codestate.session.showPopover",
+        "title": "CodeState: Show Session Popover",
+        "category": "CodeState"
+      },
+      {
+        "command": "codestate.script.showPopover",
+        "title": "CodeState: Show Script Popover",
+        "category": "CodeState"
+      },
+      {
+        "command": "codestate.createSession",
+        "title": "CodeState: Create Session",
+        "category": "CodeState"
+      },
+      {
+        "command": "codestate.createScript",
+        "title": "CodeState: Create Script",
+        "category": "CodeState"
+      }
+    ],
+    "keybindings": [],
+    "views": {
+      "codestate": [
+        {
+          "id": "codestate.sessionsView",
+          "name": "Sessions & Scripts"
+        },
+        {
+          "id": "codestateConfig",
+          "name": "Config"
+        }
+      ]
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "codestate",
+          "title": "CodeState",
+          "icon": "resources/icon.svg"
+        }
+      ]
+    },
+    "menus": {
+      "view/item/context": [
+        {
+          "command": "codestate.file.open",
+          "when": "view == codestate.sessionsView && viewItem == file",
+          "group": "inline"
+        },
+        {
+          "command": "codestate.file.copyPath",
+          "when": "view == codestate.sessionsView && viewItem == file",
+          "group": "4_copy"
+        },
+        {
+          "command": "codestate.file.removeFromSession",
+          "when": "view == codestate.sessionsView && viewItem == file",
+          "group": "3_delete"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "CodeState",
+      "properties": {
+        "codestate.logging.enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable console logging for debugging purposes"
+        },
+        "codestate.logging.level": {
+          "type": "string",
+          "enum": ["none", "error", "warn", "info", "debug"],
+          "default": "none",
+          "description": "Set the logging level for console output"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run package",
+    "compile": "npm run check-types && npm run lint && node esbuild.js",
+    "watch": "npm-run-all -p watch:*",
+    "watch:esbuild": "node esbuild.js --watch",
+    "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
+    "package": "npm run check-types && npm run lint && node esbuild.js --production",
+    "compile-tests": "tsc -p . --outDir out",
+    "watch-tests": "tsc -p . -w --outDir out",
+    "pretest": "npm run compile-tests && npm run compile && npm run lint",
+    "check-types": "tsc --noEmit",
+    "lint": "eslint src",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.0",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "20.x",
+    "@types/vscode": "^1.102.0",
+    "@typescript-eslint/eslint-plugin": "^8.31.1",
+    "@typescript-eslint/parser": "^8.31.1",
+    "@vscode/test-cli": "^0.0.11",
+    "@vscode/test-electron": "^2.5.2",
+    "esbuild": "^0.25.3",
+    "eslint": "^9.25.1",
+    "jest": "^29.5.0",
+    "npm-run-all": "^4.1.5",
+    "ts-jest": "^29.1.0",
+    "typescript": "^5.8.3"
+  },
+  "dependencies": {
+    "codestate-core": "^1.1.6"
+  }
+}
