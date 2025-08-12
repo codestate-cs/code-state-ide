@@ -1,23 +1,37 @@
 {
   "name": "codestate-ide",
-  "displayName": "CodeState IDE",
+  "displayName": "CodeState",
   "description": "Save and restore your VS Code development sessions with full context",
   "icon": "Frame.png",
-  "version": "0.0.1",
+  "version": "1.0.1",
+  "publisher": "karthikchinasani",
   "engines": {
     "vscode": "^1.102.0"
   },
   "categories": [
     "Other",
-    "Developer Tools"
+    "SCM Providers"
   ],
   "keywords": [
     "session",
     "context",
     "productivity",
     "development",
-    "workspace"
+    "workspace",
+    "save",
+    "resume",
+    "git",
+    "terminal"
   ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/codestate-cs/code-state-ide.git"
+  },
+  "bugs": {
+    "url": "https://github.com/codestate-cs/code-state-ide/issues"
+  },
+  "homepage": "https://github.com/codestate-cs/code-state-ide#readme",
+  "license": "MIT",
   "activationEvents": [
     "onStartupFinished"
   ],
@@ -203,6 +217,6 @@
     "typescript": "^5.8.3"
   },
   "dependencies": {
-    "codestate-core": "^1.1.6"
+    "codestate-core": "^1.2.0"
   }
 }

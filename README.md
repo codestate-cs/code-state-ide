@@ -2,7 +2,7 @@
 
 Save and restore your VS Code development sessions with full context - your "save game" button for development.
 
-[![Version](https://img.shields.io/badge/version-0.0.1-blue.svg)](https://marketplace.visualstudio.com/items?itemName=your-publisher.codestate-ide)
+[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://marketplace.visualstudio.com/items?itemName=karthikchinasani.codestate-ide)
 [![VS Code](https://img.shields.io/badge/VS%20Code-1.102.0+-blue.svg)](https://code.visualstudio.com/)
 
 ## 🚀 What is CodeState IDE?
@@ -130,7 +130,7 @@ We welcome contributions! Please see our [Development Plan](docs/DEVELOPMENT_PLA
 
 ## 📝 Release Notes
 
-### 0.0.1
+### 1.0.0
 - Initial release with core session save/resume functionality
 - VS Code integration with sidebar and command palette
 - Git state capture and restoration
@@ -143,8 +143,8 @@ This extension is licensed under the MIT License.
 
 ## 🔗 Links
 
-- [GitHub Repository](https://github.com/your-username/codestate-ide)
-- [Issues & Feedback](https://github.com/your-username/codestate-ide/issues)
+- [GitHub Repository](https://github.com/codestate-cs/code-state-ide)
+- [Issues & Feedback](https://github.com/codestate-cs/code-state-ide/issues)
 - [VS Code Extension Guidelines](https://code.visualstudio.com/api/references/extension-guidelines)
 
 ---
