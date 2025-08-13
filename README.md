@@ -36,11 +36,6 @@ CodeState IDE is a powerful productivity extension that helps developers capture
 - Visualize your work history in the dedicated sidebar
 - Quick access to any previous development state
 
-### 🛠️ **Interactive & Scriptable**
-- Use interactively with intuitive prompts
-- Fully scriptable for automation and CI/CD workflows
-- Customizable to fit your specific workflow
-
 ## 🎮 How to Use
 
 ### Quick Start
@@ -117,7 +112,19 @@ CodeState IDE is built with clean architecture principles:
 3. Search for "CodeState IDE"
 4. Click Install
 
-## 🚀 Getting Started
+## �️ CLI Version
+
+Prefer using the command line? Try [CodeState CLI](https://www.npmjs.com/package/codestate-cli) for session management outside VS Code.
+
+Install globally with:
+
+```bash
+npm install -g codestate-cli
+```
+
+See the [codestate-cli documentation](https://www.npmjs.com/package/codestate-cli) for usage and features.
+
+## �🚀 Getting Started
 
 1. **Install the extension** from the VS Code marketplace
 2. **Open the CodeState sidebar** - you'll see a new icon in the activity bar
