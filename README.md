@@ -5,6 +5,8 @@ Save and restore your VS Code development sessions with full context - your "sav
 [![Version](https://img.shields.io/badge/version-1.0.2-blue.svg)](https://marketplace.visualstudio.com/items?itemName=karthikchinasani.codestate-ide)
 [![VS Code](https://img.shields.io/badge/VS%20Code-1.82.0+-blue.svg)](https://code.visualstudio.com/)
 
+![CodeState IDE Demo](resources/demo.gif)
+
 ## 🚀 What is CodeState IDE?
 
 CodeState IDE is a powerful productivity extension that helps developers capture, save, and restore their entire working context with a single command. Think of it as a "save game" button for your development environment - you can pause work at any moment and later resume exactly where you left off, with full continuity and minimal friction.
