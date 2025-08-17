@@ -21,7 +21,6 @@ import { CreateScriptWebviewProvider } from "./presentation/webviews/CreateScrip
 import { SessionWebviewProvider } from "./presentation/webviews/SessionWebviewProvider";
 import { ErrorHandler } from "./shared/errors/ErrorHandler";
 import { ErrorContext, ExtensionError } from "./shared/errors/ExtensionError";
-import { SessionRestoreUtil } from "./shared/utils/SessionRestoreUtil";
 
 export async function activate(context: vscode.ExtensionContext) {
   console.log("CodeState IDE extension is now active!");
@@ -136,32 +135,6 @@ export async function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(configChangeListener);
 
     console.log("CodeState IDE extension activation completed successfully");
-
-    // Check for pending session restore after activation is complete
-    console.log("Extension: About to check for pending session restore...");
-    try {
-      console.log("Extension: Calling SessionRestoreUtil.checkForPendingSessionRestore()...");
-      const sessionId = await SessionRestoreUtil.checkForPendingSessionRestore();
-      
-      if (sessionId) {
-        console.log("Extension: Found pending session ID:", sessionId);
-        // Add a small delay to ensure the window is fully ready
-        setTimeout(async () => {
-          try {
-            console.log("Extension: Executing session restore for ID:", sessionId);
-            await ResumeSessionCommand.resumeSessionById(sessionId);
-          } catch (error) {
-            console.error("Extension: Error executing session restore:", error);
-          }
-        }, 1000); // 1 second delay
-      } else {
-        console.log("Extension: No pending session restore found");
-      }
-      console.log("Extension: Session restore check completed");
-    } catch (error) {
-      console.error("Extension: Failed to check for pending session restore:", error);
-      console.error("Extension: Error details:", error instanceof Error ? error.stack : 'No stack trace');
-    }
   } catch (error) {
     const extensionError =
       error instanceof ExtensionError

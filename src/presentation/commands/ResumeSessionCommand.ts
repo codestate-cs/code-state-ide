@@ -1,9 +1,8 @@
 import * as vscode from 'vscode';
-import { ResumeSession, ListSessions, Session, GitService, Terminal, GetScriptsByRootPath, FileStorage, GetConfig } from 'codestate-core';
+import { ResumeSession, ListSessions, Session, GitService, Terminal, GetScriptsByRootPath, FileStorage, GetConfig, OpenFiles } from 'codestate-core';
 import { ErrorHandler } from '../../shared/errors/ErrorHandler';
 import { ExtensionError, ErrorContext } from '../../shared/errors/ExtensionError';
 import { Messages } from '../../shared/constants/Messages';
-import { SessionRestoreUtil } from '../../shared/utils/SessionRestoreUtil';
 import * as path from 'path';
 import * as fs from 'fs';
 
@@ -57,7 +56,7 @@ export class ResumeSessionCommand {
           return;
         }
 
-        // Open project folder in new window, then open files
+        // Open project folder and files in new window using codestate-core
         console.log(`ResumeSessionCommand: Opening new VS Code window for session: ${session.name}`);
         
         try {
@@ -76,21 +75,39 @@ export class ResumeSessionCommand {
           const sessionWithFiles = result.value;
           console.log(`ResumeSessionCommand: Loaded session with ${sessionWithFiles.files.length} files`);
           
-          // Store session ID for later restoration using the utility
-          const storeResult = await SessionRestoreUtil.storeSessionForRestore(session.id);
+          // Get configured IDE from config
+          const getConfig = new GetConfig();
+          const configResult = await getConfig.execute();
           
-          if (!storeResult) {
-            console.error("ResumeSessionCommand: Failed to store session for restore");
-            return;
+          if (!configResult.ok) {
+            throw new Error(`Failed to get config: ${configResult.error.message}`);
           }
           
-          // Open the project folder in a new window
-          const folderUri = vscode.Uri.file(session.projectRoot);
-          await vscode.commands.executeCommand('vscode.openFolder', folderUri, { forceNewWindow: true });
+          const configuredIDE = configResult.value.ide || 'vscode'; // Default to vscode if not configured
           
-          vscode.window.showInformationMessage(
-            `Opening project in new window with ${sessionWithFiles.files.length} files from session "${session.name}".`
-          );
+          // Convert session files to FileToOpen format
+          const filesToOpen = sessionWithFiles.files.map(file => ({
+            path: file.path,
+            line: file.cursor?.line,
+            column: file.cursor?.column,
+            isActive: file.isActive
+          }));
+          
+          // Use OpenFiles to open the project and files in a new window
+          const openFiles = new OpenFiles();
+          const openResult = await openFiles.execute({
+            ide: configuredIDE,
+            projectRoot: session.projectRoot,
+            files: filesToOpen
+          });
+          
+          if (openResult.ok) {
+            vscode.window.showInformationMessage(
+              `Opened project in ${configuredIDE} with ${sessionWithFiles.files.length} files from session "${session.name}".`
+            );
+          } else {
+            throw new Error(`Failed to open files in ${configuredIDE}: ${openResult.error.message}`);
+          }
           
         } catch (error) {
           console.error("ResumeSessionCommand: Failed to open new window:", error);
