@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { SessionsTreeDataProvider } from './SessionsTreeDataProvider';
 import { SessionPopoverProvider } from './SessionPopoverProvider';
 import { ScriptPopoverProvider } from './ScriptPopoverProvider';
-import { SaveSessionCommand } from '../commands/SaveSessionCommand';
+import { SessionCommand } from '../commands/SessionCommand';
 import { ListSessionsCommand } from '../commands/ListSessionsCommand';
 
 export class SessionsTreeViewProvider {

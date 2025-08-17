@@ -503,6 +503,29 @@ declare class IDEFacade implements IIDEService {
 	getAvailableIDEs(): Promise<Result<IDE[]>>;
 	isIDEInstalled(ideName: string): Promise<Result<boolean>>;
 }
+export interface IStorageService {
+	read(path: string): Promise<Result<string, StorageError>>;
+	write(path: string, data: string): Promise<Result<void, StorageError>>;
+	exists(path: string): Promise<Result<boolean, StorageError>>;
+	delete(path: string): Promise<Result<void, StorageError>>;
+}
+export interface IEncryptionService {
+	encrypt(data: string, key: string): Promise<Result<string, EncryptionError>>;
+	decrypt(data: string, key: string): Promise<Result<string, EncryptionError>>;
+}
+export interface FileStorageConfig {
+	encryptionEnabled?: boolean;
+	encryptionKey?: string;
+	dataDir?: string;
+}
+declare class FileStorageFacade implements IStorageService {
+	private service;
+	constructor(config?: FileStorageConfig, logger?: ILoggerService, encryption?: IEncryptionService);
+	read(path: string): Promise<Result<string, StorageError>>;
+	write(path: string, data: string): Promise<Result<void, StorageError>>;
+	exists(path: string): Promise<Result<boolean, StorageError>>;
+	delete(path: string): Promise<Result<void, StorageError>>;
+}
 declare class GitFacade implements IGitService {
 	private service;
 	constructor(repositoryPath?: string, logger?: ILoggerService, terminalService?: ITerminalService);
@@ -523,6 +546,7 @@ declare class GitFacade implements IGitService {
 
 export {
 	CLILoggerFacade as ConfigurableLogger,
+	FileStorageFacade as FileStorage,
 	GitFacade as GitService,
 	IDEFacade as IDEService,
 	TerminalFacade as Terminal,

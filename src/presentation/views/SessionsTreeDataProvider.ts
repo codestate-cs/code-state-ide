@@ -7,7 +7,7 @@ import {
 } from "../../shared/errors/ExtensionError";
 import { ScriptPopoverProvider } from "./ScriptPopoverProvider";
 import { SessionPopoverProvider } from "./SessionPopoverProvider";
-import { CreateSessionWebviewProvider } from "../webviews/CreateSessionWebviewProvider";
+import { SessionWebviewProvider } from "../webviews/SessionWebviewProvider";
 import { CreateScriptWebviewProvider } from "../webviews/CreateScriptWebviewProvider";
 
 export class SessionsTreeDataProvider
@@ -23,14 +23,14 @@ export class SessionsTreeDataProvider
   private errorHandler: ErrorHandler;
   private sessionPopoverProvider: SessionPopoverProvider;
   private scriptPopoverProvider: ScriptPopoverProvider;
-  private createSessionWebviewProvider: CreateSessionWebviewProvider;
+  private sessionWebviewProvider: SessionWebviewProvider;
   private createScriptWebviewProvider: CreateScriptWebviewProvider;
 
   constructor() {
     this.errorHandler = ErrorHandler.getInstance();
     this.sessionPopoverProvider = new SessionPopoverProvider();
     this.scriptPopoverProvider = new ScriptPopoverProvider();
-    this.createSessionWebviewProvider = new CreateSessionWebviewProvider();
+    this.sessionWebviewProvider = new SessionWebviewProvider();
     this.createScriptWebviewProvider = new CreateScriptWebviewProvider();
   }
 
@@ -317,6 +317,7 @@ export class SessionsTreeDataProvider
     const workspaceFolders = vscode.workspace.workspaceFolders;
     if (workspaceFolders && workspaceFolders.length > 0) {
       actionItems.push(new AddSessionTreeItem());
+      actionItems.push(new UpdateSessionTreeItem());
       actionItems.push(new AddScriptTreeItem());
       actionItems.push(new SeparatorTreeItem());
     }
@@ -456,14 +457,19 @@ export class SessionsTreeDataProvider
 
         // Add individual files as children
         session.files.forEach((file) => {
-          const fileName = file.path.split("/").pop() || file.path;
+          // Display relative path in UI, but use full path for resource URI
+          const relativePath = file.path.startsWith(session.projectRoot) 
+            ? file.path.replace(session.projectRoot, '').replace(/^[\\\/]/, '')
+            : file.path;
+          const fileName = relativePath.split("/").pop() || relativePath;
+          
           const fileItem = new vscode.TreeItem(
-            fileName,
+            relativePath, // Show relative path in tree view
             vscode.TreeItemCollapsibleState.None
           );
           fileItem.contextValue = "file";
-          fileItem.resourceUri = vscode.Uri.file(file.path);
-          fileItem.tooltip = file.path;
+          fileItem.resourceUri = vscode.Uri.file(file.path); // Use full path for URI
+          fileItem.tooltip = file.path; // Show full path in tooltip
 
           if (file.isActive) {
             fileItem.description = "active";
@@ -474,19 +480,19 @@ export class SessionsTreeDataProvider
       }
 
       // Git branch
-      if (session.git && session.git.branch) {
-        const branchItem = new vscode.TreeItem(
-          `🌿 Branch: ${session.git.branch}`,
-          vscode.TreeItemCollapsibleState.None
-        );
-        details.push(branchItem);
-      } else {
-        const branchItem = new vscode.TreeItem(
-          `🌿 Branch: unknown`,
-          vscode.TreeItemCollapsibleState.None
-        );
-        details.push(branchItem);
-      }
+      // if (session.git && session.git.branch) {
+      //   const branchItem = new vscode.TreeItem(
+      //     `🌿 Branch: ${session.git.branch}`,
+      //     vscode.TreeItemCollapsibleState.None
+      //   );
+      //   details.push(branchItem);
+      // } else {
+      //   const branchItem = new vscode.TreeItem(
+      //     `🌿 Branch: unknown`,
+      //     vscode.TreeItemCollapsibleState.None
+      //   );
+      //   details.push(branchItem);
+      // }
 
       // Tags
       if (session.tags && Array.isArray(session.tags) && session.tags.length > 0) {
@@ -739,6 +745,21 @@ class AddScriptTreeItem extends vscode.TreeItem {
     this.command = {
       command: "codestate.createScript",
       title: "Add Script",
+    };
+  }
+}
+
+class UpdateSessionTreeItem extends vscode.TreeItem {
+  constructor() {
+    super("📝 Update Session", vscode.TreeItemCollapsibleState.None);
+
+    this.contextValue = "action";
+    this.tooltip = "Update an existing session with current state";
+    this.iconPath = undefined;
+
+    this.command = {
+      command: "codestate.updateSessionWebview",
+      title: "Update Session",
     };
   }
 }
