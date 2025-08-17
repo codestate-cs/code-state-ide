@@ -20,7 +20,13 @@ export class SessionCommand {
 
   static async execute(
     mode: "create" | "update" = "create",
-    sessionToUpdate?: Session
+    sessionToUpdate?: Session,
+    sessionData?: {
+      name?: string;
+      notes?: string;
+      tags?: string[];
+      files?: FileState[];
+    }
   ): Promise<void> {
     try {
       if (!this.errorHandler) {
@@ -33,10 +39,7 @@ export class SessionCommand {
         return; // User cancelled or Git operation failed
       }
 
-      // Check for temporary session data from webview
-      const tempData = (globalThis as any).__tempSessionData;
-      console.log("SessionCommand: tempData from webview:", tempData);
-      
+      // Use passed session data or check for temporary session data from webview
       let session: Session | undefined;
       let updateData:
         | {
@@ -47,52 +50,84 @@ export class SessionCommand {
           }
         | undefined;
 
-      if (tempData) {
-        // Use data from webview
-        updateData = {
-          name: tempData.name,
-          notes: tempData.notes,
-          tags: tempData.tags,
-          files: tempData.files,
-        };
-        console.log("SessionCommand: Created updateData from tempData:", updateData);
-
-        if (tempData.mode === "update" && tempData.sessionId) {
-          // Get the session by ID for update mode
-          const listSessions = new ListSessions();
-          const sessionsResult = await listSessions.execute({});
-          if (!sessionsResult.ok) {
-            throw new Error("Failed to load sessions");
+      if (sessionData) {
+        // Use data passed directly to the command
+        updateData = sessionData;
+        console.log("SessionCommand: Using passed sessionData:", updateData);
+        console.log("SessionCommand: mode:", mode);
+        console.log("SessionCommand: sessionToUpdate:", sessionToUpdate);
+        
+        // For update mode, we need to ensure we have the session
+        if (mode === "update") {
+          console.log("SessionCommand: Update mode detected");
+          if (sessionToUpdate) {
+            // Use the provided session
+            session = sessionToUpdate;
+            console.log("SessionCommand: Using provided sessionToUpdate:", session);
+          } else {
+            console.log("SessionCommand: No sessionToUpdate provided, will select from list");
+            // Get session from user selection for update mode
+            const selectedSession = await this.selectSessionToUpdate();
+            if (!selectedSession) {
+              console.log("SessionCommand: No session selected, user cancelled");
+              return; // User cancelled
+            }
+            session = selectedSession;
+            console.log("SessionCommand: Selected session from list:", session);
           }
-
-          const foundSession = sessionsResult.value.find(
-            (s) => s.id === tempData.sessionId
-          );
-          if (!foundSession) {
-            throw new Error("Session not found");
-          }
-          session = foundSession;
         }
       } else {
-        // Check if workspace is open
-        const workspaceFolders = vscode.workspace.workspaceFolders;
-        if (!workspaceFolders || workspaceFolders.length === 0) {
-          vscode.window.showErrorMessage(
-            Messages.WORKSPACE_REQUIRED || "No workspace folder is open"
-          );
-          return;
-        }
+        // Fallback to global variable for backward compatibility
+        const tempData = (globalThis as any).__tempSessionData;
+        console.log("SessionCommand: tempData from webview:", tempData);
+        
+        if (tempData) {
+          // Use data from webview
+          updateData = {
+            name: tempData.name,
+            notes: tempData.notes,
+            tags: tempData.tags,
+            files: tempData.files,
+          };
+          console.log("SessionCommand: Created updateData from tempData:", updateData);
 
-        if (sessionToUpdate) {
-          // Use the provided session
-          session = sessionToUpdate;
-        } else if (mode === "update") {
-          // Get session from user selection for update mode
-          const selectedSession = await this.selectSessionToUpdate();
-          if (!selectedSession) {
-            return; // User cancelled
+          if (tempData.mode === "update" && tempData.sessionId) {
+            // Get the session by ID for update mode
+            const listSessions = new ListSessions();
+            const sessionsResult = await listSessions.execute({});
+            if (!sessionsResult.ok) {
+              throw new Error("Failed to load sessions");
+            }
+
+            const foundSession = sessionsResult.value.find(
+              (s) => s.id === tempData.sessionId
+            );
+            if (!foundSession) {
+              throw new Error("Session not found");
+            }
+            session = foundSession;
           }
-          session = selectedSession;
+        } else {
+          // Check if workspace is open
+          const workspaceFolders = vscode.workspace.workspaceFolders;
+          if (!workspaceFolders || workspaceFolders.length === 0) {
+            vscode.window.showErrorMessage(
+              Messages.WORKSPACE_REQUIRED || "No workspace folder is open"
+            );
+            return;
+          }
+
+          if (sessionToUpdate) {
+            // Use the provided session
+            session = sessionToUpdate;
+          } else if (mode === "update") {
+            // Get session from user selection for update mode
+            const selectedSession = await this.selectSessionToUpdate();
+            if (!selectedSession) {
+              return; // User cancelled
+            }
+            session = selectedSession;
+          }
         }
       }
 
@@ -125,8 +160,9 @@ export class SessionCommand {
 
           // ALWAYS use webview data - this command should only be called from webview
           if (!updateData) {
+            console.error("SessionCommand: No updateData available.");
             vscode.window.showErrorMessage(
-              "Session data not found. Please use the webview to create or update sessions."
+              "Session data not found. Please use the webview to create or update sessions. If this error persists, try refreshing the extension."
             );
             return;
           }
@@ -192,8 +228,13 @@ export class SessionCommand {
               );
             }
           } else {
+            // Ensure we have a session for update mode
+            if (!session) {
+              throw new Error("No session selected for update. Please select a session to update.");
+            }
+            
             const updateSession = new UpdateSession();
-            const result = await updateSession.execute(session!.id, {
+            const result = await updateSession.execute(session.id, {
               notes,
               tags,
               files,
@@ -230,12 +271,12 @@ export class SessionCommand {
         }
       );
 
-      // Clean up temporary session data if it exists
+      // Clean up any temporary session data if it exists (for backward compatibility)
       if ((globalThis as any).__tempSessionData) {
         delete (globalThis as any).__tempSessionData;
       }
     } catch (error) {
-      // Clean up temporary session data if it exists
+      // Clean up any temporary session data if it exists (for backward compatibility)
       if ((globalThis as any).__tempSessionData) {
         delete (globalThis as any).__tempSessionData;
       }
@@ -531,11 +572,11 @@ export class SessionCommand {
 
   static register(context: vscode.ExtensionContext): vscode.Disposable[] {
     return [
-      vscode.commands.registerCommand("codestate.saveSession", () => {
-        this.execute("create");
+      vscode.commands.registerCommand("codestate.saveSession", (mode?: string, sessionToUpdate?: Session, sessionData?: any) => {
+        this.execute(mode as "create" | "update" || "create", sessionToUpdate, sessionData);
       }),
-      vscode.commands.registerCommand("codestate.updateSession", () => {
-        this.execute("update");
+      vscode.commands.registerCommand("codestate.updateSession", (mode?: string, sessionToUpdate?: Session, sessionData?: any) => {
+        this.execute(mode as "create" | "update" || "update", sessionToUpdate, sessionData);
       }),
     ];
   }

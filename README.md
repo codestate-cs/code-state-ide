@@ -2,8 +2,8 @@
 
 Save and restore your VS Code development sessions with full context - your "save game" button for development.
 
-[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://marketplace.visualstudio.com/items?itemName=karthikchinasani.codestate-ide)
-[![VS Code](https://img.shields.io/badge/VS%20Code-1.102.0+-blue.svg)](https://code.visualstudio.com/)
+[![Version](https://img.shields.io/badge/version-1.0.2-blue.svg)](https://marketplace.visualstudio.com/items?itemName=karthikchinasani.codestate-ide)
+[![VS Code](https://img.shields.io/badge/VS%20Code-1.82.0+-blue.svg)](https://code.visualstudio.com/)
 
 ## 🚀 What is CodeState IDE?
 
@@ -102,7 +102,7 @@ CodeState IDE is built with clean architecture principles:
 
 ## 🔧 Requirements
 
-- VS Code 1.102.0 or higher
+- VS Code 1.82.0 or higher
 - No additional dependencies required
 
 ## 📦 Installation
@@ -116,13 +116,42 @@ CodeState IDE is built with clean architecture principles:
 
 Prefer using the command line? Try [CodeState CLI](https://www.npmjs.com/package/codestate-cli) for session management outside VS Code.
 
+### Installation
+
 Install globally with:
 
 ```bash
 npm install -g codestate-cli
 ```
 
-See the [codestate-cli documentation](https://www.npmjs.com/package/codestate-cli) for usage and features.
+### Features
+
+The CLI version provides the same powerful session management capabilities:
+
+- **Save Sessions**: Capture your current development state
+- **Resume Sessions**: Restore any saved session with full context
+- **List Sessions**: View and manage all your saved sessions
+- **Git Integration**: Automatic branch and stash management
+- **Script Execution**: Run project-specific scripts on session resume
+- **IDE Integration**: Open sessions in your preferred IDE
+
+### Quick CLI Usage
+
+```bash
+# Save current session
+codestate save
+
+# Resume a session
+codestate resume
+
+# List all sessions
+codestate list
+
+# Resume specific session by name
+codestate resume "my-session-name"
+```
+
+See the [codestate-cli documentation](https://www.npmjs.com/package/codestate-cli) for complete usage and features.
 
 ## �🚀 Getting Started
 
@@ -131,11 +160,14 @@ See the [codestate-cli documentation](https://www.npmjs.com/package/codestate-cl
 3. **Save your first session** using the command palette
 4. **Resume sessions** whenever you need to get back to work
 
-## 🤝 Contributing
-
-We welcome contributions! Please see our [Development Plan](docs/DEVELOPMENT_PLAN.md) and [Implementation Roadmap](docs/IMPLEMENTATION_ROADMAP.md) for more details.
 
 ## 📝 Release Notes
+
+### 1.0.2
+- Enhanced session resume functionality with OpenFiles integration
+- Improved cross-window session restoration
+- Better IDE configuration support
+- Bug fixes and performance improvements
 
 ### 1.0.0
 - Initial release with core session save/resume functionality
@@ -150,6 +182,7 @@ This extension is licensed under the MIT License.
 
 ## 🔗 Links
 
+- [CodeState Website](https://www.codestate.dev/) - Official landing page
 - [GitHub Repository](https://github.com/codestate-cs/code-state-ide)
 - [Issues & Feedback](https://github.com/codestate-cs/code-state-ide/issues)
 - [VS Code Extension Guidelines](https://code.visualstudio.com/api/references/extension-guidelines)

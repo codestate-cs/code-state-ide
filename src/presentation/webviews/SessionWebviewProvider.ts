@@ -18,7 +18,16 @@ export class SessionWebviewProvider {
     this.errorHandler = ErrorHandler.getInstance();
   }
 
+  private resetState(): void {
+    console.log("SessionWebviewProvider: Resetting state");
+    this.selectedSession = undefined;
+    this.hasUncommittedChanges = false;
+    this.panel = undefined;
+  }
+
   async show(mode: "create" | "update" = "create"): Promise<void> {
+    // Reset state for new session
+    this.resetState();
     this.mode = mode;
 
     if (mode === "update") {
@@ -77,7 +86,8 @@ export class SessionWebviewProvider {
     // Handle panel disposal
     this.panel.onDidDispose(() => {
       this.panel = undefined;
-      this.selectedSession = undefined;
+      // Don't clear selectedSession here as it might be needed for save operations
+      // It will be cleared when the webview provider is destroyed or reset
     });
   }
 
@@ -224,6 +234,10 @@ export class SessionWebviewProvider {
   }
 
   private async handleSaveSession(sessionData: any): Promise<void> {
+    console.log("SessionWebviewProvider: handleSaveSession called");
+    console.log("SessionWebviewProvider: mode:", this.mode);
+    console.log("SessionWebviewProvider: selectedSession:", this.selectedSession);
+    
     try {
       // Show warning if there are uncommitted changes
       if (this.hasUncommittedChanges) {
@@ -244,10 +258,8 @@ export class SessionWebviewProvider {
         `SessionWebviewProvider: Captured ${fileStates.length} file states`
       );
 
-      // Store the session data temporarily
-      (globalThis as any).__tempSessionData = {
-        mode: this.mode,
-        sessionId: this.selectedSession?.id,
+      // Prepare session data
+      const sessionDataToPass = {
         name: sessionData.name,
         notes: sessionData.notes,
         tags: sessionData.tags
@@ -259,18 +271,21 @@ export class SessionWebviewProvider {
         files: fileStates,
       };
 
-      // Close the panel first
+      console.log("SessionWebviewProvider: Session data prepared:", sessionDataToPass);
+
+      // Execute the appropriate command based on mode with session data
+      if (this.mode === "create") {
+        await vscode.commands.executeCommand("codestate.saveSession", "create", undefined, sessionDataToPass);
+      } else {
+        console.log("SessionWebviewProvider: Update mode - selectedSession:", this.selectedSession);
+        if (!this.selectedSession) {
+          throw new Error("No session selected for update. Please select a session first.");
+        }
+        await vscode.commands.executeCommand("codestate.updateSession", "update", this.selectedSession, sessionDataToPass);
+      }
+
+      // Close the panel after the command has been executed
       this.panel?.dispose();
-
-      // Execute the appropriate command based on mode
-      const command =
-        this.mode === "create"
-          ? "codestate.saveSession"
-          : "codestate.updateSession";
-      await vscode.commands.executeCommand(command);
-
-      // Clean up
-      delete (globalThis as any).__tempSessionData;
     } catch (error) {
       const extensionError =
         error instanceof ExtensionError

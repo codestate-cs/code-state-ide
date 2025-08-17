@@ -117,7 +117,13 @@ export class ResumeSessionCommand {
         
         return; // Exit current command
       }
-
+      console.log("ResumeSessionCommand: session", session);
+      const resumeSession = new ResumeSession();
+      const sessionData = await resumeSession.execute(sessionToResume?.id || '');
+      
+      if(sessionData.ok){
+        session = sessionData.value;
+      };
       // Check current Git state before proceeding
       const shouldProceed = await this.checkCurrentGitState(session);
       if (!shouldProceed) {
@@ -203,7 +209,7 @@ export class ResumeSessionCommand {
   }
 
   private static async restoreFileStates(session: Session): Promise<void> {
-    console.log("ResumeSessionCommand: restoreFileStates called with", session.files.length, "files");
+    console.log("ResumeSessionCommand: restoreFileStates called");
     
     if (!session.files || !Array.isArray(session.files)) {
       console.log("ResumeSessionCommand: No files to restore in this session");
@@ -211,8 +217,10 @@ export class ResumeSessionCommand {
       return;
     }
     
+    console.log("ResumeSessionCommand: restoreFileStates called with", session.files?.length || 0, "files");
+    
     // Log the first file to see what we're working with
-    if (session.files.length > 0) {
+    if (session.files && session.files.length > 0) {
       const firstFile = session.files[0];
       console.log("ResumeSessionCommand: First file details:", {
         path: firstFile.path,
@@ -267,7 +275,7 @@ export class ResumeSessionCommand {
       }
     }
     
-    console.log("ResumeSessionCommand: Opened", openedCount, "documents out of", session.files.length, "files");
+    console.log("ResumeSessionCommand: Opened", openedCount, "documents out of", session.files?.length || 0, "files");
     
     // Small delay to ensure all documents are properly loaded
     await new Promise(resolve => setTimeout(resolve, 200));
@@ -317,7 +325,7 @@ export class ResumeSessionCommand {
       }
     }
     
-    console.log("ResumeSessionCommand: Showed", shownCount, "documents in tabs out of", session.files.length, "files");
+    console.log("ResumeSessionCommand: Showed", shownCount, "documents in tabs out of", session.files?.length || 0, "files");
     
     // Small delay before focusing active file
     await new Promise(resolve => setTimeout(resolve, 200));
@@ -588,8 +596,8 @@ export class ResumeSessionCommand {
         throw new Error(`Session "${session.name}" has no files data`);
       }
       
-      console.log(`ResumeSessionCommand: Session has ${session.files.length} files`);
-      console.log("ResumeSessionCommand: Session files:", session.files.map(f => ({ path: f.path, isActive: f.isActive })));
+      console.log(`ResumeSessionCommand: Session has ${session.files?.length || 0} files`);
+      console.log("ResumeSessionCommand: Session files:", session.files?.map(f => ({ path: f.path, isActive: f.isActive })) || []);
       
       // Execute the actual resume logic directly
       console.log("ResumeSessionCommand: Starting resume execution...");
@@ -634,8 +642,8 @@ export class ResumeSessionCommand {
 
         // Use the session data we already have (complete with files)
         const resumedSession = session;
-        console.log(`ResumeSessionCommand: Using session with ${resumedSession.files.length} files`);
-        console.log("ResumeSessionCommand: Session files:", resumedSession.files.map(f => ({ path: f.path, isActive: f.isActive })));
+        console.log(`ResumeSessionCommand: Using session with ${resumedSession.files?.length || 0} files`);
+        console.log("ResumeSessionCommand: Session files:", resumedSession.files?.map(f => ({ path: f.path, isActive: f.isActive })) || []);
 
         progress.report({ increment: 20, message: 'Closing current files...' });
         console.log("ResumeSessionCommand: Step 2 - Closing current files...");
