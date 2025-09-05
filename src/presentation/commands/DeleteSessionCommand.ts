@@ -1,15 +1,22 @@
 import * as vscode from 'vscode';
-import { DeleteSession, ListSessions, Session } from 'codestate-core';
+import { DeleteSession, Session } from '@codestate/core';
 import { ErrorHandler } from '../../shared/errors/ErrorHandler';
 import { ExtensionError, ErrorContext } from '../../shared/errors/ExtensionError';
+import { DataCacheService } from '../../infrastructure/services/DataCacheService';
+import { useCacheStore } from '../../shared/stores/cacheStore';
 
 export class DeleteSessionCommand {
   private static errorHandler: ErrorHandler;
+  private static dataCacheService: DataCacheService;
 
   static async execute(sessionToDelete?: Session): Promise<void> {
     try {
       if (!this.errorHandler) {
         this.errorHandler = ErrorHandler.getInstance();
+      }
+      
+      if (!this.dataCacheService) {
+        this.dataCacheService = DataCacheService.getInstance();
       }
 
       let session: Session;
@@ -26,17 +33,12 @@ export class DeleteSessionCommand {
 
         const projectRoot = workspaceFolders[0].uri.fsPath;
 
-        // Get available sessions for this project
-        const listSessions = new ListSessions();
-        const sessionsResult = await listSessions.execute({
-          search: projectRoot
-        });
-
-        if (!sessionsResult.ok) {
-          throw new Error('Failed to load sessions');
-        }
-
-        const sessions = sessionsResult.value.filter(session => 
+        // Get available sessions from cache
+        await this.dataCacheService.getSessions();
+        
+        // Get sessions from store
+        const store = useCacheStore.getState();
+        const sessions = store.sessions.filter(session => 
           session.projectRoot === projectRoot
         );
 
@@ -85,13 +87,16 @@ export class DeleteSessionCommand {
       }, async (progress) => {
         progress.report({ message: 'Deleting session...', increment: 50 });
 
-        // Delete the session using codestate-core
+        // Delete the session using @codestate/core
         const deleteSession = new DeleteSession();
         const result = await deleteSession.execute(session.id);
 
         if (!result.ok) {
           throw new Error(`Failed to delete session: ${result.error.message}`);
         }
+
+        // Clear sessions cache to force refresh
+        this.dataCacheService.clearSessionsCache();
 
         progress.report({ message: 'Session deleted successfully!', increment: 50 });
       });

@@ -13,11 +13,15 @@ import { ListSessionsCommand } from "./presentation/commands/ListSessionsCommand
 import { RefreshConfigCommand } from "./presentation/commands/RefreshConfigCommand";
 import { RefreshLoggerCommand } from "./presentation/commands/RefreshLoggerCommand";
 import { ResumeSessionCommand } from "./presentation/commands/ResumeSessionCommand";
+import { SaveTerminalCollectionCommand } from "./presentation/commands/SaveTerminalCollectionCommand";
+import { UpdateTerminalCollectionCommand } from "./presentation/commands/UpdateTerminalCollectionCommand";
 import { SessionCommand } from "./presentation/commands/SessionCommand";
 import { ConfigTreeDataProvider } from "./presentation/views/ConfigTreeDataProvider";
 import { SessionsTreeViewProvider } from "./presentation/views/SessionsTreeViewProvider";
+import { TerminalsTreeViewProvider } from "./presentation/views/TerminalsTreeViewProvider";
 import { StatusBarProvider } from "./presentation/views/StatusBarProvider";
 import { CreateScriptWebviewProvider } from "./presentation/webviews/CreateScriptWebviewProvider";
+import { CreateTerminalCollectionWebviewProvider } from "./presentation/webviews/CreateTerminalCollectionWebviewProvider";
 import { SessionWebviewProvider } from "./presentation/webviews/SessionWebviewProvider";
 import { ErrorHandler } from "./shared/errors/ErrorHandler";
 import { ErrorContext, ExtensionError } from "./shared/errors/ExtensionError";
@@ -42,13 +46,20 @@ export async function activate(context: vscode.ExtensionContext) {
     // Register sessions tree view provider
     const sessionsTreeViewProvider = new SessionsTreeViewProvider(context);
     console.log("Sessions tree view provider registered");
+    
+    // Make the tree view provider accessible globally for highlighting
+    (global as any).sessionsTreeViewProvider = sessionsTreeViewProvider;
+
+    // Register terminals tree view provider
+    const terminalsTreeViewProvider = new TerminalsTreeViewProvider(context);
+    console.log("Terminals tree view provider registered");
 
     // Register status bar provider
     const statusBarProvider = new StatusBarProvider();
     await statusBarProvider.updateSessionCount();
     console.log("Status bar provider registered");
 
-    context.subscriptions.push(configTreeView, statusBarProvider);
+    context.subscriptions.push(configTreeView, statusBarProvider, terminalsTreeViewProvider);
     console.log("Tree view disposables added to context subscriptions");
 
     // Register config commands
@@ -67,9 +78,14 @@ export async function activate(context: vscode.ExtensionContext) {
     const addScriptDisposable = AddScriptCommand.register(context);
     const refreshLoggerDisposable = RefreshLoggerCommand.register(context);
 
+    // Register terminal collection commands
+    const saveTerminalCollectionDisposable = SaveTerminalCollectionCommand.register(context);
+    const updateTerminalCollectionDisposable = UpdateTerminalCollectionCommand.register(context);
+
     // Register webview commands
     const sessionWebviewProvider = new SessionWebviewProvider();
     const createScriptWebviewProvider = new CreateScriptWebviewProvider();
+    const createTerminalCollectionWebviewProvider = new CreateTerminalCollectionWebviewProvider();
 
     const createSessionDisposable = vscode.commands.registerCommand(
       "codestate.createSession",
@@ -90,6 +106,16 @@ export async function activate(context: vscode.ExtensionContext) {
       }
     );
 
+    const createTerminalCollectionDisposable = vscode.commands.registerCommand(
+      "codestate.createTerminalCollection",
+      () => {
+        createTerminalCollectionWebviewProvider.show();
+      }
+    );
+
+    // Make the terminal collection webview provider accessible globally for updates
+    (global as any).createTerminalCollectionWebviewProvider = createTerminalCollectionWebviewProvider;
+
     const updateSessionWebviewDisposable = vscode.commands.registerCommand(
       "codestate.updateSessionWebview",
       async () => {
@@ -99,6 +125,14 @@ export async function activate(context: vscode.ExtensionContext) {
           return; // User cancelled or Git operation failed
         }
         sessionWebviewProvider.show('update');
+      }
+    );
+
+    const focusSessionsViewDisposable = vscode.commands.registerCommand(
+      "codestate.sessionsView.focus",
+      () => {
+        // This command is used internally by the tree view provider
+        // It will be handled by VS Code's built-in tree view focus mechanism
       }
     );
 
@@ -112,9 +146,13 @@ export async function activate(context: vscode.ExtensionContext) {
       debugSessionsDisposable,
       addScriptDisposable,
       refreshLoggerDisposable,
+      saveTerminalCollectionDisposable,
+      updateTerminalCollectionDisposable,
       createSessionDisposable,
       createScriptDisposable,
-      updateSessionWebviewDisposable
+      createTerminalCollectionDisposable,
+      updateSessionWebviewDisposable,
+      focusSessionsViewDisposable
     );
     console.log("Commands registered");
 

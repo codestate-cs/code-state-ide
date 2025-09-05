@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { ResumeSession, ListSessions, Session, GitService, Terminal, GetScriptsByRootPath, FileStorage, GetConfig, OpenFiles } from 'codestate-core';
+import { ResumeSession, ListSessions, Session, GitService, Terminal, GetScriptsByRootPath, FileStorage, GetConfig, OpenFiles, ResumeScript } from '@codestate/core';
 import { ErrorHandler } from '../../shared/errors/ErrorHandler';
 import { ExtensionError, ErrorContext } from '../../shared/errors/ExtensionError';
 import { Messages } from '../../shared/constants/Messages';
@@ -9,6 +9,7 @@ import * as fs from 'fs';
 export class ResumeSessionCommand {
   private static errorHandler: ErrorHandler;
   private static extensionContext: vscode.ExtensionContext | undefined;
+  private static terminal = new Terminal();
 
   static async execute(sessionToResume?: Session): Promise<void> {
     try {
@@ -56,7 +57,7 @@ export class ResumeSessionCommand {
           return;
         }
 
-        // Open project folder and files in new window using codestate-core
+        // Open project folder and files in new window using @codestate/core
         console.log(`ResumeSessionCommand: Opening new VS Code window for session: ${session.name}`);
         
         try {
@@ -437,8 +438,8 @@ export class ResumeSessionCommand {
       // Check if we need to switch branches
       if (currentBranch !== session.git.branch && session.git.branch !== 'unknown') {
         // Check if the session branch exists locally
-        const terminal = new Terminal();
-        const branchExistsResult = await terminal.execute(`git branch --list ${session.git.branch}`, {
+        
+        const branchExistsResult = await this.terminal.execute(`git branch --list ${session.git.branch}`, {
           cwd: session.projectRoot
         });
         
@@ -448,7 +449,7 @@ export class ResumeSessionCommand {
         }
 
         // Switch to the saved branch automatically
-        const switchResult = await terminal.execute(`git checkout ${session.git.branch}`, {
+        const switchResult = await this.terminal.execute(`git checkout ${session.git.branch}`, {
           cwd: session.projectRoot
         });
         
@@ -470,36 +471,39 @@ export class ResumeSessionCommand {
       // Get scripts for this project root
       const getScripts = new GetScriptsByRootPath();
       const scriptsResult = await getScripts.execute(projectRoot);
-      
+
       if (!scriptsResult.ok || scriptsResult.value.length === 0) {
-        return;
+        return; // No scripts to execute
       }
-      
-      const terminal = new Terminal();
-      
-      // Execute each script in a new terminal
-      for (const script of scriptsResult.value) {
+
+      // Filter scripts by lifecycle events (only execute 'open' scripts)
+      const openScripts = scriptsResult.value.filter(script => 
+        script.lifecycle && script.lifecycle.includes('open')
+      );
+
+      if (openScripts.length === 0) {
+        return; // No scripts with 'open' lifecycle
+      }
+
+      // Execute each script using ResumeScript from @codestate/core
+      for (const script of openScripts) {
         try {
-          // Spawn a new terminal for each script
-          const spawnResult = await terminal.spawnTerminal(script.script, {
-            cwd: projectRoot,
-            env: process.env as Record<string, string>
-          });
+          const resumeScript = new ResumeScript();
+          const result = await resumeScript.execute(script.id);
           
-          if (!spawnResult.ok) {
+          if (!result.ok) {
             // Silently continue if script execution fails
+            console.warn(`Failed to execute script ${script.name}: ${result.error.message}`);
           }
-          
-          // Small delay between spawning terminals
-          await new Promise(resolve => setTimeout(resolve, 500));
-          
         } catch (error) {
           // Silently continue if script execution fails
+          console.warn(`Error executing script ${script.name}:`, error);
         }
       }
       
     } catch (error) {
       // Silently continue if script execution fails
+      console.warn('Error executing project scripts:', error);
     }
   }
 

@@ -6,7 +6,7 @@ import {
   SaveSession,
   Session,
   UpdateSession,
-} from "codestate-core";
+} from "@codestate/core";
 import * as vscode from "vscode";
 import { Messages } from "../../shared/constants/Messages";
 import { ErrorHandler } from "../../shared/errors/ErrorHandler";
@@ -14,6 +14,7 @@ import {
   ErrorContext,
   ExtensionError,
 } from "../../shared/errors/ExtensionError";
+import { DataCacheService } from "../../infrastructure/services/DataCacheService";
 
 export class SessionCommand {
   private static errorHandler: ErrorHandler;
@@ -21,12 +22,15 @@ export class SessionCommand {
   static async execute(
     mode: "create" | "update" = "create",
     sessionToUpdate?: Session,
-    sessionData?: {
-      name?: string;
-      notes?: string;
-      tags?: string[];
-      files?: FileState[];
-    }
+          sessionData?: {
+        name?: string;
+        notes?: string;
+        tags?: string[];
+        files?: FileState[];
+        terminalCommands?: any[];
+        terminalCollections?: string[];
+        scripts?: string[];
+      }
   ): Promise<void> {
     try {
       if (!this.errorHandler) {
@@ -47,6 +51,9 @@ export class SessionCommand {
             notes?: string;
             tags?: string[];
             files?: FileState[];
+            terminalCommands?: any[];
+            terminalCollections?: string[];
+            scripts?: string[];
           }
         | undefined;
 
@@ -88,6 +95,9 @@ export class SessionCommand {
             notes: tempData.notes,
             tags: tempData.tags,
             files: tempData.files,
+            terminalCommands: tempData.terminalCommands || [],
+            terminalCollections: tempData.terminalCollections || [],
+            scripts: tempData.scripts || [],
           };
           console.log("SessionCommand: Created updateData from tempData:", updateData);
 
@@ -220,6 +230,9 @@ export class SessionCommand {
               files: files.length > 0 ? files : undefined,
               git,
               extensions: {},
+              terminalCommands: updateData?.terminalCommands || [],
+              terminalCollections: updateData?.terminalCollections || [],
+              scripts: updateData?.scripts || [],
             });
 
             if (!result.ok) {
@@ -240,6 +253,9 @@ export class SessionCommand {
               files,
               git,
               extensions: {},
+              terminalCommands: updateData?.terminalCommands || [],
+              terminalCollections: updateData?.terminalCollections || [],
+              scripts: updateData?.scripts || [],
             });
 
             if (!result.ok) {
@@ -265,6 +281,10 @@ export class SessionCommand {
               : `Session "${session?.name}" updated successfully!`;
 
           vscode.window.showInformationMessage(successMessage);
+
+          // Clear sessions cache to ensure fresh data
+          const dataCacheService = DataCacheService.getInstance();
+          dataCacheService.clearSessionsCache();
 
           // Refresh the sessions view after successful operation
           await vscode.commands.executeCommand("codestate.refreshSessions");

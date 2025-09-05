@@ -1,68 +1,97 @@
 import * as vscode from 'vscode';
-import { ListSessions, GetScripts } from 'codestate-core';
 import { ErrorHandler } from '../../shared/errors/ErrorHandler';
 import { ExtensionError, ErrorContext } from '../../shared/errors/ExtensionError';
+import { DataCacheService } from '../../infrastructure/services/DataCacheService';
+import { useCacheStore } from '../../shared/stores/cacheStore';
 
 export class DebugSessionsCommand {
   private static errorHandler: ErrorHandler;
+  private static dataCacheService: DataCacheService;
 
   static async execute(): Promise<void> {
     try {
       if (!this.errorHandler) {
         this.errorHandler = ErrorHandler.getInstance();
       }
+      
+      if (!this.dataCacheService) {
+        this.dataCacheService = DataCacheService.getInstance();
+      }
 
       console.log('=== Debug Sessions Command Started ===');
 
-      // Test ListSessions
-      console.log('Testing ListSessions...');
+      // Test sessions from cache
+      console.log('Testing sessions from cache...');
       try {
-        const listSessions = new ListSessions();
-        console.log('ListSessions instance created successfully');
+        await this.dataCacheService.getSessions();
+        const store = useCacheStore.getState();
         
-        const sessionsResult = await listSessions.execute({});
-        console.log('ListSessions result:', sessionsResult);
-        
-        if (sessionsResult.ok) {
-          console.log(`Found ${sessionsResult.value.length} sessions`);
-          sessionsResult.value.forEach((session, index) => {
-            console.log(`Session ${index + 1}:`, {
-              name: session.name,
-              projectRoot: session.projectRoot,
-              files: session.files?.length || 0,
-              updatedAt: session.updatedAt
-            });
+        console.log(`Found ${store.sessions.length} sessions in cache`);
+        store.sessions.forEach((session, index) => {
+          console.log(`Session ${index + 1}:`, {
+            name: session.name,
+            projectRoot: session.projectRoot,
+            files: session.files?.length || 0,
+            updatedAt: session.updatedAt
           });
-        } else {
-          console.error('ListSessions failed:', sessionsResult.error);
-        }
+        });
+        
+        console.log('Cache state:', {
+          loading: store.loading.sessions,
+          error: store.errors.sessions,
+          lastUpdated: store.lastUpdated.sessions
+        });
       } catch (error) {
-        console.error('Error testing ListSessions:', error);
+        console.error('Error testing sessions from cache:', error);
       }
 
-      // Test GetScripts
-      console.log('\nTesting GetScripts...');
+      // Test scripts from cache
+      console.log('\nTesting scripts from cache...');
       try {
-        const getScripts = new GetScripts();
-        console.log('GetScripts instance created successfully');
+        await this.dataCacheService.getScripts();
+        const store = useCacheStore.getState();
         
-        const scriptsResult = await getScripts.execute();
-        console.log('GetScripts result:', scriptsResult);
-        
-        if (scriptsResult.ok) {
-          console.log(`Found ${scriptsResult.value.length} scripts`);
-          scriptsResult.value.forEach((script, index) => {
-            console.log(`Script ${index + 1}:`, {
-              name: script.name,
-              rootPath: script.rootPath,
-              script: script.script
-            });
+        console.log(`Found ${store.scripts.length} scripts in cache`);
+        store.scripts.forEach((script, index) => {
+          console.log(`Script ${index + 1}:`, {
+            name: script.name,
+            rootPath: script.rootPath,
+            script: script.script, // Legacy field
+            commands: script.commands?.length || 0,
+            lifecycle: script.lifecycle || ['none'],
+            executionMode: script.executionMode || 'same-terminal',
+            closeTerminalAfterExecution: script.closeTerminalAfterExecution || false
           });
-        } else {
-          console.error('GetScripts failed:', scriptsResult.error);
-        }
+        });
+        
+        console.log('Cache state:', {
+          loading: store.loading.scripts,
+          error: store.errors.scripts,
+          lastUpdated: store.lastUpdated.scripts
+        });
       } catch (error) {
-        console.error('Error testing GetScripts:', error);
+        console.error('Error testing scripts from cache:', error);
+      }
+
+      // Test configuration from cache
+      console.log('\nTesting configuration from cache...');
+      try {
+        await this.dataCacheService.getConfig();
+        const store = useCacheStore.getState();
+        
+        if (store.config) {
+          console.log('Configuration loaded from cache:', store.config);
+        } else {
+          console.log('No configuration found in cache');
+        }
+        
+        console.log('Cache state:', {
+          loading: store.loading.config,
+          error: store.errors.config,
+          lastUpdated: store.lastUpdated.config
+        });
+      } catch (error) {
+        console.error('Error testing configuration from cache:', error);
       }
 
       // Test workspace

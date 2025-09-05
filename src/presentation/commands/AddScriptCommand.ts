@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { CreateScript, Script } from 'codestate-core';
+import { CreateScript, Script } from '@codestate/core';
 import { ErrorHandler } from '../../shared/errors/ErrorHandler';
 import { ExtensionError, ErrorContext } from '../../shared/errors/ExtensionError';
 
@@ -55,9 +55,17 @@ export class AddScriptCommand {
       // Create CreateScript instance and execute
       const createScript = new CreateScript();
       const result = await createScript.execute({
+        id: `temp-${Date.now()}`, // Temporary ID that will be replaced by the service
         name: scriptName,
-        script: scriptCommand,
-        rootPath: projectRoot
+        rootPath: projectRoot,
+        commands: [{
+          command: scriptCommand,
+          name: scriptName,
+          priority: 1
+        }],
+        lifecycle: ['open', 'resume'], // Default to both open and resume
+        executionMode: 'same-terminal', // Default to same terminal
+        closeTerminalAfterExecution: false // Default to keep terminal open
       });
 
       if (result.ok) {

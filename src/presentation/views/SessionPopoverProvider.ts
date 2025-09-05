@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { Session, UpdateSession } from 'codestate-core';
+import { Session, UpdateSession } from '@codestate/core';
 import { ResumeSessionCommand } from '../commands/ResumeSessionCommand';
 import { DeleteSessionCommand } from '../commands/DeleteSessionCommand';
 
@@ -27,48 +27,47 @@ export class SessionPopoverProvider {
 
     // Show quick pick menu as popover
     const actions: PopoverAction[] = [
-             {
-         id: 'resume',
-         label: '▶️ Resume Session',
-         icon: '▶️',
-         action: async () => {
-           await ResumeSessionCommand.execute(session);
-           this.onRefresh?.();
-         }
-       },
+      {
+        id: 'resume',
+        label: '▶️ Resume Session',
+        icon: '▶️',
+        action: async () => {
+          await this.openSessionWebview(session, 'resume');
+        }
+      },
+      {
+        id: 'edit',
+        label: '✏️ Edit Session',
+        icon: '✏️',
+        action: async () => {
+          await this.openSessionWebview(session, 'edit');
+        }
+      },
       {
         id: 'edit-notes',
-        label: '✏️ Edit Notes',
-        icon: '✏️',
+        label: '📝 Quick Edit Notes',
+        icon: '📝',
         action: async () => {
           await this.editSessionNotes(session);
         }
       },
       {
         id: 'manage-tags',
-        label: '🏷️ Manage Tags',
+        label: '🏷️ Quick Edit Tags',
         icon: '🏷️',
         action: async () => {
           await this.manageSessionTags(session);
         }
       },
       {
-        id: 'export',
-        label: '📤 Export Session',
-        icon: '📤',
+        id: 'delete',
+        label: '🗑️ Delete Session',
+        icon: '🗑️',
         action: async () => {
-          await this.exportSession(session);
+          await DeleteSessionCommand.execute(session);
+          this.onRefresh?.();
         }
-      },
-             {
-         id: 'delete',
-         label: '🗑️ Delete Session',
-         icon: '🗑️',
-         action: async () => {
-           await DeleteSessionCommand.execute(session);
-           this.onRefresh?.();
-         }
-       }
+      }
     ];
 
     const selectedAction = await vscode.window.showQuickPick(
@@ -95,6 +94,22 @@ export class SessionPopoverProvider {
 
 
 
+  private async openSessionWebview(session: Session, mode: 'resume' | 'edit'): Promise<void> {
+    try {
+      // Import the SessionWebviewProvider dynamically to avoid circular dependencies
+      const { SessionWebviewProvider } = await import('../webviews/SessionWebviewProvider.js');
+      
+      // Create and show the webview
+      const webviewProvider = new SessionWebviewProvider();
+      await webviewProvider.show(mode, session);
+      
+      // Refresh the session list after any changes
+      this.onRefresh?.();
+    } catch (error) {
+      vscode.window.showErrorMessage(`Failed to open session webview: ${error}`);
+    }
+  }
+
   private async editSessionNotes(session: Session): Promise<void> {
     const notes = await vscode.window.showInputBox({
       prompt: 'Edit session notes',
@@ -112,7 +127,7 @@ export class SessionPopoverProvider {
         }, async (progress) => {
           progress.report({ message: 'Updating session notes...', increment: 50 });
 
-          // Update the session notes using UpdateSession from codestate-core
+          // Update the session notes using UpdateSession from @codestate/core
           const updateSession = new UpdateSession();
           const result = await updateSession.execute(session.id, {
             notes: notes
@@ -151,7 +166,7 @@ export class SessionPopoverProvider {
         }, async (progress) => {
           progress.report({ message: 'Updating session tags...', increment: 50 });
 
-          // Update the session tags using UpdateSession from codestate-core
+          // Update the session tags using UpdateSession from @codestate/core
           const updateSession = new UpdateSession();
           const result = await updateSession.execute(session.id, {
             tags: tags
@@ -172,8 +187,10 @@ export class SessionPopoverProvider {
     }
   }
 
+
+
   private async exportSession(session: Session): Promise<void> {
-    // TODO: Implement session export using ExportSession from codestate-core
+    // TODO: Implement session export using ExportSession from @codestate/core
     vscode.window.showInformationMessage('Session export not implemented yet');
   }
 

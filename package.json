@@ -78,7 +78,6 @@
         "title": "CodeState: Refresh Sessions",
         "category": "CodeState"
       },
-
       {
         "command": "codestate.session.resume",
         "title": "CodeState: Resume Session",
@@ -89,7 +88,6 @@
         "title": "CodeState: Rename Session",
         "category": "CodeState"
       },
-
       {
         "command": "codestate.script.add",
         "title": "CodeState: Add Script",
@@ -129,6 +127,36 @@
         "command": "codestate.createScript",
         "title": "CodeState: Create Script",
         "category": "CodeState"
+      },
+      {
+        "command": "codestate.createTerminalCollection",
+        "title": "CodeState: Create Terminal Collection",
+        "category": "CodeState"
+      },
+      {
+        "command": "codestate.saveTerminalCollection",
+        "title": "CodeState: Save Terminal Collection",
+        "category": "CodeState"
+      },
+      {
+        "command": "codestate.updateTerminalCollection",
+        "title": "CodeState: Update Terminal Collection",
+        "category": "CodeState"
+      },
+      {
+        "command": "codestate.terminalCollection.showPopover",
+        "title": "CodeState: Show Terminal Collection Popover",
+        "category": "CodeState"
+      },
+      {
+        "command": "codestate.terminals.refresh",
+        "title": "CodeState: Refresh Terminals",
+        "category": "CodeState"
+      },
+      {
+        "command": "codestate.sessionsView.focus",
+        "title": "CodeState: Focus Sessions View",
+        "category": "CodeState"
       }
     ],
     "keybindings": [],
@@ -136,11 +164,18 @@
       "codestate": [
         {
           "id": "codestate.sessionsView",
-          "name": "Sessions & Scripts"
+          "name": "Sessions & Scripts",
+          "showCollapseAll": true
+        },
+        {
+          "id": "codestate.terminalsView",
+          "name": "Terminals",
+          "showCollapseAll": true
         },
         {
           "id": "codestateConfig",
-          "name": "Config"
+          "name": "Config",
+          "showCollapseAll": true
         }
       ]
     },
@@ -169,8 +204,14 @@
           "command": "codestate.file.removeFromSession",
           "when": "view == codestate.sessionsView && viewItem == file",
           "group": "3_delete"
+        },
+        {
+          "command": "codestate.terminalCollection.showPopover",
+          "when": "view == codestate.terminalsView && viewItem == terminalCollection",
+          "group": "1_open"
         }
-      ]
+      ],
+      "view/title": []
     },
     "configuration": {
       "title": "CodeState",
@@ -182,7 +223,13 @@
         },
         "codestate.logging.level": {
           "type": "string",
-          "enum": ["none", "error", "warn", "info", "debug"],
+          "enum": [
+            "none",
+            "error",
+            "warn",
+            "info",
+            "debug"
+          ],
           "default": "none",
           "description": "Set the logging level for console output"
         }
@@ -222,6 +269,7 @@
     "typescript": "^5.8.3"
   },
   "dependencies": {
-    "codestate-core": "^1.3.0"
+    "@codestate/core": "^1.0.5",
+    "zustand": "^4.5.0"
   }
 }

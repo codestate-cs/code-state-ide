@@ -1,4 +1,4 @@
-import { GetScripts, ListSessions, Script, Session } from "codestate-core";
+import { GetScripts, ListSessions, Script, Session } from "@codestate/core";
 import * as vscode from "vscode";
 import { ErrorHandler } from "../../shared/errors/ErrorHandler";
 import {
@@ -9,6 +9,8 @@ import { ScriptPopoverProvider } from "./ScriptPopoverProvider";
 import { SessionPopoverProvider } from "./SessionPopoverProvider";
 import { SessionWebviewProvider } from "../webviews/SessionWebviewProvider";
 import { CreateScriptWebviewProvider } from "../webviews/CreateScriptWebviewProvider";
+import { DataCacheService } from "../../infrastructure/services/DataCacheService";
+import { useCacheStore } from "../../shared/stores/cacheStore";
 
 export class SessionsTreeDataProvider
   implements vscode.TreeDataProvider<vscode.TreeItem>
@@ -25,6 +27,11 @@ export class SessionsTreeDataProvider
   private scriptPopoverProvider: ScriptPopoverProvider;
   private sessionWebviewProvider: SessionWebviewProvider;
   private createScriptWebviewProvider: CreateScriptWebviewProvider;
+  private dataCacheService: DataCacheService;
+  private refreshTimeout: NodeJS.Timeout | null = null;
+  private isRefreshing = false;
+  private highlightedItemId: string | null = null;
+  private highlightTimeout: NodeJS.Timeout | null = null;
 
   constructor() {
     this.errorHandler = ErrorHandler.getInstance();
@@ -32,10 +39,63 @@ export class SessionsTreeDataProvider
     this.scriptPopoverProvider = new ScriptPopoverProvider();
     this.sessionWebviewProvider = new SessionWebviewProvider();
     this.createScriptWebviewProvider = new CreateScriptWebviewProvider();
+    this.dataCacheService = DataCacheService.getInstance();
+    
+    // Note: Removed automatic subscription to prevent infinite refresh loops
+    // Tree view will be refreshed manually when needed via refreshCacheAndView()
+  }
+
+  private subscribeToCacheChanges(): void {
+    // Removed automatic subscription to prevent infinite refresh loops
+    // The tree view will be refreshed manually when operations complete
+    console.log('SessionsTreeDataProvider: Automatic cache subscription disabled to prevent infinite loops');
+  }
+
+  dispose(): void {
+    // Clean up timeout to prevent memory leaks
+    if (this.refreshTimeout) {
+      clearTimeout(this.refreshTimeout);
+      this.refreshTimeout = null;
+    }
   }
 
   refresh(): void {
-    this._onDidChangeTreeData.fire();
+    // Debounce rapid successive refreshes
+    if (this.refreshTimeout) {
+      clearTimeout(this.refreshTimeout);
+    }
+    
+    this.refreshTimeout = setTimeout(() => {
+      this._onDidChangeTreeData.fire();
+    }, 100); // 100ms debounce
+  }
+
+  async refreshCacheAndView(): Promise<void> {
+    // Prevent multiple simultaneous refresh operations
+    if (this.isRefreshing) {
+      console.log('SessionsTreeDataProvider: Refresh already in progress, skipping...');
+      return;
+    }
+
+    try {
+      this.isRefreshing = true;
+      console.log('SessionsTreeDataProvider: Refreshing cache and view...');
+      
+      // Refresh both sessions and scripts cache
+      await Promise.all([
+        this.dataCacheService.getSessions(true),
+        this.dataCacheService.getScripts(true)
+      ]);
+      
+      // Refresh the tree view
+      this.refresh();
+      
+      console.log('SessionsTreeDataProvider: Cache and view refreshed successfully');
+    } catch (error) {
+      console.error('SessionsTreeDataProvider: Error refreshing cache and view:', error);
+    } finally {
+      this.isRefreshing = false;
+    }
   }
 
   getTreeItem(element: vscode.TreeItem): vscode.TreeItem {
@@ -163,7 +223,7 @@ export class SessionsTreeDataProvider
 
   private async getProjects(): Promise<vscode.TreeItem[]> {
     try {
-      // Get ALL sessions and scripts from codestate-core (not filtered by current workspace)
+      // Get ALL sessions and scripts from @codestate/core (not filtered by current workspace)
       const [sessionsResult, scriptsResult] = await Promise.all([
         this.getAllSessions(),
         this.getAllScripts(),
@@ -252,29 +312,18 @@ export class SessionsTreeDataProvider
 
   private async getAllSessions(): Promise<any[]> {
     try {
-      console.log("Getting all sessions...");
+      console.log("Getting all sessions from cache...");
       
-      // Check if ListSessions is available
-      if (typeof ListSessions === 'undefined') {
-        console.error("ListSessions is not available from codestate-core");
-        return [];
-      }
+      // Use the data cache service to get sessions
+      await this.dataCacheService.getSessions();
       
-      const listSessions = new ListSessions();
-      console.log("ListSessions instance created");
+      // Get the sessions from the store
+      const store = useCacheStore.getState();
       
-      const result = await listSessions.execute({});
-      console.log("Sessions result:", result);
-
-      if (!result.ok) {
-        console.error("Sessions result not ok:", result.error);
-        return [];
-      }
-
-      console.log("Sessions found:", result.value.length);
-      return result.value;
+      console.log("Sessions from cache:", store.sessions.length);
+      return store.sessions;
     } catch (error) {
-      console.error("Error getting sessions:", error);
+      console.error("Error getting sessions from cache:", error);
       console.error("Error stack:", error instanceof Error ? error.stack : 'No stack trace');
       return [];
     }
@@ -282,29 +331,18 @@ export class SessionsTreeDataProvider
 
   private async getAllScripts(): Promise<any[]> {
     try {
-      console.log("Getting all scripts...");
+      console.log("Getting all scripts from cache...");
       
-      // Check if GetScripts is available
-      if (typeof GetScripts === 'undefined') {
-        console.error("GetScripts is not available from codestate-core");
-        return [];
-      }
+      // Use the data cache service to get scripts
+      await this.dataCacheService.getScripts();
       
-      const getScripts = new GetScripts();
-      console.log("GetScripts instance created");
+      // Get the scripts from the store
+      const store = useCacheStore.getState();
       
-      const result = await getScripts.execute();
-      console.log("Scripts result:", result);
-
-      if (!result.ok) {
-        console.error("Scripts result not ok:", result.error);
-        return [];
-      }
-
-      console.log("Scripts found:", result.value.length);
-      return result.value;
+      console.log("Scripts from cache:", store.scripts.length);
+      return store.scripts;
     } catch (error) {
-      console.error("Error getting scripts:", error);
+      console.error("Error getting scripts from cache:", error);
       console.error("Error stack:", error instanceof Error ? error.stack : 'No stack trace');
       return [];
     }
@@ -419,7 +457,7 @@ export class SessionsTreeDataProvider
         return [];
       }
 
-      return projectScripts.map((script) => new ScriptTreeItem(script));
+      return projectScripts.map((script) => new ScriptTreeItem(script, this));
     } catch (error) {
       return [
         new vscode.TreeItem(
@@ -524,6 +562,42 @@ export class SessionsTreeDataProvider
       ];
     }
   }
+
+  // Method to highlight a newly created item
+  highlightNewItem(itemId: string, itemType: 'script' | 'session'): void {
+    // Clear any existing highlight
+    if (this.highlightTimeout) {
+      clearTimeout(this.highlightTimeout);
+    }
+    
+    this.highlightedItemId = itemId;
+    
+    // Refresh the tree to show the highlight
+    this.refresh();
+    
+    // Remove highlight after 3 seconds
+    this.highlightTimeout = setTimeout(() => {
+      this.highlightedItemId = null;
+      this.refresh();
+    }, 3000);
+  }
+
+  // Method to check if an item should be highlighted
+  isItemHighlighted(itemId: string): boolean {
+    return this.highlightedItemId === itemId;
+  }
+
+  // Method to get the project root path for a script
+  async getProjectRootForScript(scriptId: string): Promise<string | null> {
+    try {
+      const scripts = await this.getAllScripts();
+      const script = scripts.find(s => s.id === scriptId);
+      return script ? script.rootPath : null;
+    } catch (error) {
+      console.error('Error getting project root for script:', error);
+      return null;
+    }
+  }
 }
 
 class ProjectTreeItem extends vscode.TreeItem {
@@ -571,18 +645,49 @@ class SessionTreeItem extends vscode.TreeItem {
 
       this.contextValue = "session";
       this.resourceUri = vscode.Uri.file(session.projectRoot);
-      this.tooltip = session.notes || session.name;
+      // Create enhanced tooltip with session details
+      const tooltipParts = [];
+      if (session.notes) {
+        tooltipParts.push(`Notes: ${session.notes}`);
+      }
+      if (session.tags && session.tags.length > 0) {
+        tooltipParts.push(`Tags: ${session.tags.join(', ')}`);
+      }
+      if (session.terminalCollections && session.terminalCollections.length > 0) {
+        tooltipParts.push(`Terminal Collections: ${session.terminalCollections.length}`);
+      }
+      if (session.scripts && session.scripts.length > 0) {
+        tooltipParts.push(`Scripts: ${session.scripts.length}`);
+      }
+      if (session.files && session.files.length > 0) {
+        tooltipParts.push(`Files: ${session.files.length}`);
+      }
+      
+      this.tooltip = tooltipParts.length > 0 ? tooltipParts.join('\n') : session.name;
 
       // Set icon based on session type
       console.log(`Getting session icon for: ${session.name}`);
       this.iconPath = new vscode.ThemeIcon(this.getSessionIcon(session));
 
-      // Set description with time ago
+      // Set description with time ago and metadata
       console.log(
         `Getting time ago for: ${session.name}, updatedAt:`,
         session.updatedAt
       );
-      this.description = this.getTimeAgo(session.updatedAt);
+      const timeAgo = this.getTimeAgo(session.updatedAt);
+      const metadata = [];
+      
+      if (session.terminalCollections && session.terminalCollections.length > 0) {
+        metadata.push(`🚀 ${session.terminalCollections.length}`);
+      }
+      if (session.scripts && session.scripts.length > 0) {
+        metadata.push(`📜 ${session.scripts.length}`);
+      }
+      if (session.files && session.files.length > 0) {
+        metadata.push(`📂 ${session.files.length}`);
+      }
+      
+      this.description = metadata.length > 0 ? `${timeAgo} • ${metadata.join(' ')}` : timeAgo;
 
       // Make clickable for popover
       this.command = {
@@ -700,13 +805,22 @@ class SessionTreeItem extends vscode.TreeItem {
 }
 
 class ScriptTreeItem extends vscode.TreeItem {
-  constructor(public readonly script: Script) {
+  constructor(public readonly script: Script, private treeDataProvider?: SessionsTreeDataProvider) {
     super(script.name, vscode.TreeItemCollapsibleState.None);
 
     this.contextValue = "script";
     this.resourceUri = vscode.Uri.file(script.rootPath);
-    this.tooltip = script.script;
-    this.description = script.script;
+    
+    // Handle new Script interface with commands array
+    if (script.commands && script.commands.length > 0) {
+      const commandText = script.commands.map(cmd => cmd.command).join(' && ');
+      this.tooltip = `${script.name}\nCommands: ${commandText}\nLifecycle: ${script.lifecycle?.join(', ') || 'none'}\nExecution: ${script.executionMode || 'same-terminal'}`;
+      this.description = commandText.length > 50 ? commandText.substring(0, 50) + '...' : commandText;
+    } else {
+      // Fallback to legacy script field
+      this.tooltip = script.script || 'No command specified';
+      this.description = script.script || 'No command specified';
+    }
 
     this.iconPath = new vscode.ThemeIcon("terminal");
 
@@ -716,6 +830,26 @@ class ScriptTreeItem extends vscode.TreeItem {
       title: "Show Script Popover",
       arguments: [script],
     };
+
+    // Apply highlighting if this is the highlighted item
+    if (this.treeDataProvider && this.treeDataProvider.isItemHighlighted(script.id)) {
+      this.applyHighlight();
+    }
+  }
+
+  private applyHighlight(): void {
+    // Add a custom CSS class for highlighting
+    this.iconPath = new vscode.ThemeIcon("star", new vscode.ThemeColor("notificationsInfoIcon.foreground"));
+    
+    // Add a temporary description to indicate it's new
+    const originalDescription = this.description;
+    this.description = "✨ New";
+    
+    // Restore original description after highlight period
+    setTimeout(() => {
+      this.description = originalDescription;
+      this.iconPath = new vscode.ThemeIcon("terminal");
+    }, 3000);
   }
 }
 
@@ -733,6 +867,8 @@ class AddSessionTreeItem extends vscode.TreeItem {
     };
   }
 }
+
+
 
 class AddScriptTreeItem extends vscode.TreeItem {
   constructor() {

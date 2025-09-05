@@ -13,6 +13,9 @@ export interface Session {
 	files: FileState[];
 	git: GitState;
 	extensions?: Record<string, unknown>;
+	terminalCommands?: TerminalCommandState[];
+	terminalCollections?: string[];
+	scripts?: string[];
 }
 export interface FileState {
 	path: string;
@@ -25,6 +28,7 @@ export interface FileState {
 		left: number;
 	};
 	isActive: boolean;
+	position?: number;
 }
 export interface GitState {
 	branch: string;
@@ -32,12 +36,33 @@ export interface GitState {
 	isDirty: boolean;
 	stashId?: string | null;
 }
+export interface TerminalCommandState {
+	terminalId: number;
+	terminalName?: string;
+	commands: SessionTerminalCommand[];
+}
+export interface SessionTerminalCommand {
+	command: string;
+	name: string;
+	priority: number;
+}
 export interface Script {
+	id: string;
 	name: string;
 	rootPath: string;
-	script: string;
+	script?: string;
+	commands?: ScriptCommand[];
+	lifecycle?: LifecycleEvent[];
+	executionMode?: "same-terminal" | "new-terminals";
+	closeTerminalAfterExecution?: boolean;
+}
+export interface ScriptCommand {
+	command: string;
+	name: string;
+	priority: number;
 }
 export interface ScriptIndexEntry {
+	id: string;
 	rootPath: string;
 	referenceFile: string;
 }
@@ -46,6 +71,36 @@ export interface ScriptIndex {
 }
 export interface ScriptCollection {
 	scripts: Script[];
+}
+export type LifecycleEvent = "open" | "resume" | "none";
+export interface ScriptReference {
+	id: string;
+	rootPath: string;
+}
+export interface TerminalCollection {
+	id: string;
+	name: string;
+	rootPath: string;
+	lifecycle: LifecycleEvent[];
+	scriptReferences: ScriptReference[];
+	closeTerminalAfterExecution?: boolean;
+}
+export interface TerminalCollectionWithScripts {
+	id: string;
+	name: string;
+	rootPath: string;
+	lifecycle: LifecycleEvent[];
+	scripts: Script[];
+	closeTerminalAfterExecution?: boolean;
+}
+export interface TerminalCollectionIndexEntry {
+	id: string;
+	name: string;
+	rootPath: string;
+	referenceFile: string;
+}
+export interface TerminalCollectionIndex {
+	entries: TerminalCollectionIndexEntry[];
 }
 declare const LoggerConfigSchema: z.ZodObject<{
 	level: z.ZodEnum<{
@@ -105,6 +160,48 @@ export declare class ResetConfig {
 	constructor(configService?: IConfigService);
 	execute(): Promise<Result<Config>>;
 }
+export type ResetOptions = {
+	sessions?: boolean;
+	scripts?: boolean;
+	terminals?: boolean;
+	config?: boolean;
+	all?: boolean;
+};
+export declare class ResetAll {
+	private fileStorage;
+	private dataDir;
+	private configService;
+	constructor(dataDir?: string);
+	private initializeServices;
+	private ensureDataDir;
+	private getDefaultDataDir;
+	execute(options: ResetOptions): Promise<Result<{
+		resetItems: string[];
+	}>>;
+	private resetSessions;
+	private resetScripts;
+	private resetTerminals;
+	private resetConfig;
+	private cleanupDataDirectory;
+}
+export interface VersionInfo {
+	currentVersion: string;
+	storedVersion: string;
+	requiresReset: boolean;
+	isUpgrade: boolean;
+}
+export declare class CheckVersionUpgrade {
+	private configService;
+	private logger;
+	private readonly MINIMUM_RESET_VERSION;
+	private readonly CURRENT_VERSION;
+	constructor(configService?: IConfigService);
+	execute(): Promise<Result<VersionInfo>>;
+	private shouldRequireReset;
+	private isVersionUpgrade;
+	private parseVersion;
+	private compareVersions;
+}
 export declare class ExportConfig {
 	private configService;
 	constructor(configService?: IConfigService);
@@ -115,22 +212,21 @@ export declare class ImportConfig {
 	constructor(configService?: IConfigService);
 	execute(json: string): Promise<Result<Config>>;
 }
+export declare function getDefaultConfig(dataDir?: string): Config;
 export interface IScriptService {
 	createScript(script: Script): Promise<Result<void>>;
 	createScripts(scripts: Script[]): Promise<Result<void>>;
 	getScriptsByRootPath(rootPath: string): Promise<Result<Script[]>>;
 	getAllScripts(): Promise<Result<Script[]>>;
+	getScriptById(id: string): Promise<Result<Script>>;
 	updateScript(name: string, rootPath: string, script: Partial<Script>): Promise<Result<void>>;
 	updateScripts(updates: Array<{
 		name: string;
 		rootPath: string;
 		script: Partial<Script>;
 	}>): Promise<Result<void>>;
-	deleteScript(name: string, rootPath: string): Promise<Result<void>>;
-	deleteScripts(scripts: Array<{
-		name: string;
-		rootPath: string;
-	}>): Promise<Result<void>>;
+	deleteScript(scriptId: string): Promise<Result<void>>;
+	deleteScripts(scriptIds: string[]): Promise<Result<void>>;
 	deleteScriptsByRootPath(rootPath: string): Promise<Result<void>>;
 	getScriptIndex(): Promise<Result<ScriptIndex>>;
 	updateScriptIndex(index: ScriptIndex): Promise<Result<void>>;
@@ -155,6 +251,44 @@ export declare class GetScriptsByRootPath {
 	constructor(scriptService?: IScriptService);
 	execute(rootPath: string): Promise<Result<Script[]>>;
 }
+export interface TerminalCommand {
+	command: string;
+	args?: string[];
+	cwd?: string;
+	env?: Record<string, string>;
+	timeout?: number;
+}
+export interface TerminalResult {
+	success: boolean;
+	exitCode: number;
+	stdout: string;
+	stderr: string;
+	duration: number;
+	error?: string;
+}
+export interface TerminalOptions {
+	cwd?: string;
+	env?: Record<string, string>;
+	timeout?: number;
+	shell?: string;
+}
+export interface ITerminalService {
+	execute(command: string, options?: TerminalOptions): Promise<Result<TerminalResult>>;
+	executeCommand(command: TerminalCommand): Promise<Result<TerminalResult>>;
+	executeBatch(commands: TerminalCommand[]): Promise<Result<TerminalResult[]>>;
+	spawnTerminal(command: string, options?: TerminalOptions): Promise<Result<boolean>>;
+	spawnTerminalCommand(command: TerminalCommand): Promise<Result<boolean>>;
+	spawnApplication(command: string, options?: TerminalOptions): Promise<Result<boolean>>;
+	getLastCommandsFromTerminals(): Promise<Result<TerminalCommandState[]>>;
+	isCommandAvailable(command: string): Promise<Result<boolean>>;
+	getShell(): Promise<Result<string>>;
+}
+export declare class ResumeScript {
+	private terminalService;
+	private scriptService;
+	constructor(terminalService?: ITerminalService);
+	execute(scriptId: string): Promise<Result<void>>;
+}
 export declare class UpdateScript {
 	private scriptService;
 	constructor(scriptService?: IScriptService);
@@ -163,7 +297,7 @@ export declare class UpdateScript {
 export declare class DeleteScript {
 	private scriptService;
 	constructor(scriptService?: IScriptService);
-	execute(name: string, rootPath: string): Promise<Result<void>>;
+	execute(scriptId: string): Promise<Result<void>>;
 }
 export declare class DeleteScriptsByRootPath {
 	private scriptService;
@@ -190,6 +324,8 @@ export interface ISessionService {
 	updateSession(idOrName: string, input: Partial<Session> & {
 		notes?: string;
 		tags?: string[];
+		terminalCollections?: string[];
+		scripts?: string[];
 	}): Promise<Result<Session>>;
 	resumeSession(idOrName: string): Promise<Result<Session>>;
 	listSessions(filter?: {
@@ -197,7 +333,7 @@ export interface ISessionService {
 		search?: string;
 	}): Promise<Result<Session[]>>;
 	deleteSession(idOrName: string): Promise<Result<void>>;
-	exportSession(idOrName: string, outputPath: string): Promise<Result<string>>;
+	exportSession(idOrName: string, outputPath: string): Promise<Result<void>>;
 	importSession(filePath: string): Promise<Result<Session>>;
 }
 export declare class SaveSession {
@@ -211,6 +347,9 @@ export declare class SaveSession {
 		files?: Session["files"];
 		git: Session["git"];
 		extensions?: Session["extensions"];
+		terminalCommands?: Session["terminalCommands"];
+		terminalCollections?: Session["terminalCollections"];
+		scripts?: Session["scripts"];
 	}): Promise<Result<Session>>;
 }
 export declare class UpdateSession {
@@ -222,6 +361,9 @@ export declare class UpdateSession {
 		files?: Session["files"];
 		git?: Session["git"];
 		extensions?: Session["extensions"];
+		terminalCommands?: Session["terminalCommands"];
+		terminalCollections?: Session["terminalCollections"];
+		scripts?: Session["scripts"];
 	}): Promise<Result<Session>>;
 }
 export declare class ResumeSession {
@@ -379,6 +521,55 @@ export declare class GetAvailableIDEs {
 	constructor(ideService?: IIDEService);
 	execute(): Promise<Result<IDE[]>>;
 }
+export interface ITerminalCollectionService {
+	createTerminalCollection(terminalCollection: TerminalCollection): Promise<Result<void>>;
+	getTerminalCollection(name: string, rootPath?: string): Promise<Result<TerminalCollection>>;
+	getTerminalCollectionById(id: string): Promise<Result<TerminalCollection>>;
+	getTerminalCollectionWithScripts(name: string, rootPath?: string): Promise<Result<TerminalCollectionWithScripts>>;
+	getTerminalCollectionWithScriptsById(id: string): Promise<Result<TerminalCollectionWithScripts>>;
+	getAllTerminalCollections(): Promise<Result<TerminalCollection[]>>;
+	getAllTerminalCollectionsWithScripts(): Promise<Result<TerminalCollectionWithScripts[]>>;
+	getTerminalCollectionsByRootPath(rootPath: string): Promise<Result<TerminalCollection[]>>;
+	getTerminalCollectionsByRootPathWithScripts(rootPath: string): Promise<Result<TerminalCollectionWithScripts[]>>;
+	getTerminalCollectionsByLifecycle(lifecycle: LifecycleEvent, rootPath: string): Promise<Result<TerminalCollection[]>>;
+	updateTerminalCollection(name: string, rootPath: string, terminalCollectionUpdate: Partial<TerminalCollection>): Promise<Result<void>>;
+	deleteTerminalCollection(name: string, rootPath: string): Promise<Result<void>>;
+	deleteTerminalCollectionById(id: string): Promise<Result<void>>;
+	deleteTerminalCollectionsByRootPath(rootPath: string): Promise<Result<void>>;
+	executeTerminalCollection(name: string, rootPath?: string): Promise<Result<void>>;
+	executeTerminalCollectionById(id: string): Promise<Result<void>>;
+}
+export declare class ListTerminalCollections {
+	private terminalCollectionService;
+	constructor(terminalCollectionService?: ITerminalCollectionService);
+	execute(): Promise<Result<TerminalCollectionWithScripts[]>>;
+}
+export declare class GetTerminalCollection {
+	private terminalCollectionService;
+	constructor(terminalCollectionService?: ITerminalCollectionService);
+	execute(name: string, rootPath?: string): Promise<Result<TerminalCollectionWithScripts>>;
+}
+export declare class CreateTerminalCollection {
+	private terminalCollectionService;
+	constructor(terminalCollectionService?: ITerminalCollectionService);
+	execute(terminalCollection: TerminalCollection): Promise<Result<void>>;
+}
+export declare class UpdateTerminalCollection {
+	private terminalCollectionService;
+	constructor(terminalCollectionService?: ITerminalCollectionService);
+	execute(name: string, rootPath: string, terminalCollectionUpdate: Partial<TerminalCollection>): Promise<Result<void>>;
+}
+export declare class DeleteTerminalCollection {
+	private terminalCollectionService;
+	constructor(terminalCollectionService?: ITerminalCollectionService);
+	execute(id: string): Promise<Result<void>>;
+}
+export declare class ExecuteTerminalCollection {
+	private terminalCollectionService;
+	constructor(terminalCollectionService?: ITerminalCollectionService);
+	execute(name: string, rootPath?: string): Promise<Result<void>>;
+	executeById(id: string): Promise<Result<void>>;
+}
 export declare enum ErrorCode {
 	UNKNOWN = "UNKNOWN",
 	CONFIG_INVALID = "CONFIG_INVALID",
@@ -454,36 +645,6 @@ export interface ILoggerService {
 	debug(message: string, meta?: Record<string, unknown>): void;
 	plainLog(message: string, meta?: Record<string, unknown>): void;
 }
-export interface TerminalCommand {
-	command: string;
-	args?: string[];
-	cwd?: string;
-	env?: Record<string, string>;
-	timeout?: number;
-}
-export interface TerminalResult {
-	success: boolean;
-	exitCode: number;
-	stdout: string;
-	stderr: string;
-	duration: number;
-	error?: string;
-}
-export interface TerminalOptions {
-	cwd?: string;
-	env?: Record<string, string>;
-	timeout?: number;
-	shell?: string;
-}
-export interface ITerminalService {
-	execute(command: string, options?: TerminalOptions): Promise<Result<TerminalResult>>;
-	executeCommand(command: TerminalCommand): Promise<Result<TerminalResult>>;
-	executeBatch(commands: TerminalCommand[]): Promise<Result<TerminalResult[]>>;
-	spawnTerminal(command: string, options?: TerminalOptions): Promise<Result<boolean>>;
-	spawnTerminalCommand(command: TerminalCommand): Promise<Result<boolean>>;
-	isCommandAvailable(command: string): Promise<Result<boolean>>;
-	getShell(): Promise<Result<string>>;
-}
 declare class TerminalFacade implements ITerminalService {
 	private service;
 	constructor(logger?: ILoggerService);
@@ -492,8 +653,10 @@ declare class TerminalFacade implements ITerminalService {
 	executeBatch(commands: TerminalCommand[]): Promise<Result<TerminalResult[]>>;
 	spawnTerminal(command: string, options?: TerminalOptions): Promise<Result<boolean>>;
 	spawnTerminalCommand(command: TerminalCommand): Promise<Result<boolean>>;
+	spawnApplication(command: string, options?: TerminalOptions): Promise<Result<boolean>>;
 	isCommandAvailable(command: string): Promise<Result<boolean>>;
 	getShell(): Promise<Result<string>>;
+	getLastCommandsFromTerminals(): Promise<Result<TerminalCommandState[]>>;
 }
 declare class IDEFacade implements IIDEService {
 	private service;

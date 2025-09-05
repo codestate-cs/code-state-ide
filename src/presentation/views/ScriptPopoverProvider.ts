@@ -1,11 +1,17 @@
 import * as vscode from 'vscode';
-import { Script, DeleteScript, UpdateScript } from 'codestate-core';
+import { Script, DeleteScript, UpdateScript, ResumeScript } from '@codestate/core';
 import { PopoverAction } from './SessionPopoverProvider';
+import { CreateScriptWebviewProvider } from '../webviews/CreateScriptWebviewProvider';
 
 export class ScriptPopoverProvider {
   private currentPopover: vscode.StatusBarItem | undefined;
   private currentScript: Script | undefined;
   private onRefresh?: () => void;
+  private createScriptWebviewProvider: CreateScriptWebviewProvider;
+
+  constructor() {
+    this.createScriptWebviewProvider = new CreateScriptWebviewProvider();
+  }
 
   setRefreshCallback(callback: () => void): void {
     this.onRefresh = callback;
@@ -79,16 +85,16 @@ export class ScriptPopoverProvider {
 
   private async executeScript(script: Script): Promise<void> {
     try {
-      // Create a new terminal and execute the script
-      const terminal = vscode.window.createTerminal({
-        name: `CodeState: ${script.name}`,
-        cwd: script.rootPath
-      });
-
-      terminal.show();
-      terminal.sendText(script.script);
-
-      vscode.window.showInformationMessage(`Executing script: ${script.name}`);
+      // Use ResumeScript from @codestate/core to handle script execution
+      const resumeScript = new ResumeScript();
+      const result = await resumeScript.execute(script.id);
+      
+      if (!result.ok) {
+        vscode.window.showErrorMessage(`Failed to execute script: ${result.error.message}`);
+        return;
+      }
+      
+      vscode.window.showInformationMessage(`Script "${script.name}" executed successfully!`);
     } catch (error) {
       vscode.window.showErrorMessage(`Failed to execute script: ${error}`);
     }
@@ -96,7 +102,17 @@ export class ScriptPopoverProvider {
 
   private async copyScriptCommand(script: Script): Promise<void> {
     try {
-      await vscode.env.clipboard.writeText(script.script);
+      // Copy the first command or the legacy script field
+      const commandToCopy = script.commands && script.commands.length > 0 
+        ? script.commands[0].command 
+        : (script.script || '');
+        
+      if (!commandToCopy || commandToCopy.trim().length === 0) {
+        vscode.window.showWarningMessage('No command found to copy');
+        return;
+      }
+        
+      await vscode.env.clipboard.writeText(commandToCopy);
       vscode.window.showInformationMessage('Script command copied to clipboard');
     } catch (error) {
       vscode.window.showErrorMessage(`Failed to copy script: ${error}`);
@@ -104,40 +120,27 @@ export class ScriptPopoverProvider {
   }
 
   private async editScript(script: Script): Promise<void> {
-    const newScript = await vscode.window.showInputBox({
-      prompt: 'Edit script command',
-      value: script.script,
-      placeHolder: 'Enter the command to execute...'
-    });
+    try {
+      // Transform the script data to match the expected format for the webview
+      const scriptData = {
+        name: script.name,
+        rootPath: script.rootPath,
+        script: script.script || '',
+        commands: script.commands && script.commands.length > 0 ? script.commands : [{
+          command: script.script || '',
+          name: script.name,
+          priority: 1
+        }],
+        lifecycle: script.lifecycle || ['none'],
+        executionMode: script.executionMode || 'new-terminals',
+        closeTerminalAfterExecution: script.closeTerminalAfterExecution || false
+      };
 
-    if (newScript !== undefined) {
-      try {
-        // Show progress
-        await vscode.window.withProgress({
-          location: vscode.ProgressLocation.Notification,
-          title: `Updating script: ${script.name}`,
-          cancellable: false
-        }, async (progress) => {
-          progress.report({ message: 'Updating script...', increment: 50 });
-
-          // Update the script using UpdateScript from codestate-core
-          const updateScript = new UpdateScript();
-          const result = await updateScript.execute(script.name, script.rootPath, {
-            script: newScript
-          });
-
-          if (!result.ok) {
-            throw new Error(`Failed to update script: ${result.error.message}`);
-          }
-
-          progress.report({ message: 'Script updated successfully!', increment: 50 });
-        });
-
-        vscode.window.showInformationMessage(`Script "${script.name}" updated successfully!`);
-        this.onRefresh?.();
-      } catch (error) {
-        vscode.window.showErrorMessage(`Failed to update script: ${error}`);
-      }
+      // Show the update webview
+      await this.createScriptWebviewProvider.showUpdate(scriptData);
+      
+    } catch (error) {
+      vscode.window.showErrorMessage(`Failed to open script editor: ${error}`);
     }
   }
 
@@ -158,9 +161,9 @@ export class ScriptPopoverProvider {
         }, async (progress) => {
           progress.report({ message: 'Deleting script...', increment: 50 });
 
-          // Delete the script using DeleteScript from codestate-core
+          // Delete the script using DeleteScript from @codestate/core
           const deleteScript = new DeleteScript();
-          const result = await deleteScript.execute(script.name, script.rootPath);
+          const result = await deleteScript.execute(script.id);
 
           if (!result.ok) {
             throw new Error(`Failed to delete script: ${result.error.message}`);

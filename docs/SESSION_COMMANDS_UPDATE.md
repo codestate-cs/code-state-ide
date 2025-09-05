@@ -34,13 +34,13 @@ This document summarizes the updates made to the CodeState VS Code extension ses
 ### 2. Terminal and Git Service Integration
 
 #### Git Service Integration
-- **Real Git State Capture**: Uses `GitService` from codestate-core to capture actual branch, commit, and dirty state
+- **Real Git State Capture**: Uses `GitService` from @codestate/core to capture actual branch, commit, and dirty state
 - **Automatic Stashing**: Creates stashes for dirty repositories with descriptive messages
 - **Repository Detection**: Checks if the project is a git repository before attempting operations
 - **Error Handling**: Graceful fallback when git operations fail
 
 #### Terminal Service Integration
-- **Script Execution**: Uses `Terminal` from codestate-core to execute project scripts
+- **Script Execution**: Uses `Terminal` from @codestate/core to execute project scripts
 - **Multiple Terminal Support**: Spawns separate terminals for each script to avoid conflicts
 - **Project Root Context**: Executes scripts in the correct project directory
 - **Environment Variables**: Passes current environment variables to script execution

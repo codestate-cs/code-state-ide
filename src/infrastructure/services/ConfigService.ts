@@ -1,13 +1,11 @@
 import { ErrorHandler } from '../../shared/errors/ErrorHandler';
 import { ExtensionError, ErrorContext } from '../../shared/errors/ExtensionError';
-import { GetConfig, UpdateConfig, isSuccess, type Config } from "codestate-core";
+import { GetConfig, UpdateConfig, isSuccess, type Config } from "@codestate/core";
+import { useCacheStore } from '../../shared/stores/cacheStore';
 
 export class ConfigService {
   private static instance: ConfigService;
   private errorHandler: ErrorHandler;
-  private config: Config | null = null;
-  private lastFetchTime: number = 0;
-  private readonly CACHE_DURATION = 30000; // 30 seconds
 
   private constructor() {
     this.errorHandler = ErrorHandler.getInstance();
@@ -21,26 +19,31 @@ export class ConfigService {
   }
 
   public async getConfig(): Promise<Config | null> {
+    const store = useCacheStore.getState();
+    
+    // Check if we have cached config and it's still fresh
+    if (store.hasData('config') && !store.isStale('config')) {
+      return store.config;
+    }
+
     try {
-      // Check if we have cached config and it's still fresh
-      if (this.config && (Date.now() - this.lastFetchTime) < this.CACHE_DURATION) {
-        return this.config;
-      }
+      store.setLoading('config', true);
+      store.setError('config', null);
 
       // Fetch fresh config from core package
       const getConfig = new GetConfig();
       const result = await getConfig.execute();
 
       if (isSuccess(result)) {
-        this.config = result.value;
-        this.lastFetchTime = Date.now();
-        return this.config;
+        store.setConfig(result.value);
+        return result.value;
       } else {
         const extensionError = ExtensionError.fromError(
           new Error('Failed to fetch configuration'),
           undefined,
           ErrorContext.CONFIGURATION
         );
+        store.setError('config', extensionError.message);
         this.errorHandler.handleError(extensionError, ErrorContext.CONFIGURATION, false);
         return null;
       }
@@ -50,14 +53,17 @@ export class ConfigService {
         undefined,
         ErrorContext.CONFIGURATION
       );
+      store.setError('config', extensionError.message);
       this.errorHandler.handleError(extensionError, ErrorContext.CONFIGURATION, false);
       return null;
+    } finally {
+      store.setLoading('config', false);
     }
   }
 
   public async refreshConfig(): Promise<void> {
-    this.config = null;
-    this.lastFetchTime = 0;
+    const store = useCacheStore.getState();
+    store.clearConfigCache();
     await this.getConfig();
   }
 
@@ -68,8 +74,8 @@ export class ConfigService {
 
       if (isSuccess(result)) {
         // Update cached config
-        this.config = config;
-        this.lastFetchTime = Date.now();
+        const store = useCacheStore.getState();
+        store.setConfig(config);
         return true;
       } else {
         const extensionError = ExtensionError.fromError(
@@ -92,6 +98,6 @@ export class ConfigService {
   }
 
   public getCachedConfig(): Config | null {
-    return this.config;
+    return useCacheStore.getState().config;
   }
 }

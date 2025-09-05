@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { FileStorage, GetConfig } from 'codestate-core';
+import { FileStorage, GetConfig } from '@codestate/core';
 import * as path from 'path';
 import * as fs from 'fs';
 

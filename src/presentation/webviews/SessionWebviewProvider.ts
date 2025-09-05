@@ -1,18 +1,35 @@
-import { FileState, ListSessions, Session } from "codestate-core";
+import { FileState, ListSessions, Session, ListTerminalCollections, GetScripts } from "@codestate/core";
 import * as vscode from "vscode";
 import { ErrorHandler } from "../../shared/errors/ErrorHandler";
 import {
   ErrorContext,
   ExtensionError,
 } from "../../shared/errors/ExtensionError";
+import { DataCacheService } from "../../infrastructure/services/DataCacheService";
 
 export class SessionWebviewProvider {
   private static readonly viewType = "codestate.session";
   private panel: vscode.WebviewPanel | undefined;
   private errorHandler: ErrorHandler;
   private selectedSession: Session | undefined;
-  private mode: "create" | "update" = "create";
+  private mode: "create" | "update" | "resume" | "edit" = "create";
   private hasUncommittedChanges: boolean = false;
+  private currentStep: number = 1;
+  private formData: {
+    name: string;
+    notes: string;
+    tags: string[];
+    files: FileState[];
+    terminalCollections: string[];
+    scripts: string[];
+  } = {
+    name: "",
+    notes: "",
+    tags: [],
+    files: [],
+    terminalCollections: [],
+    scripts: []
+  };
 
   constructor() {
     this.errorHandler = ErrorHandler.getInstance();
@@ -20,35 +37,79 @@ export class SessionWebviewProvider {
 
   private resetState(): void {
     console.log("SessionWebviewProvider: Resetting state");
-    this.selectedSession = undefined;
-    this.hasUncommittedChanges = false;
     this.panel = undefined;
+    this.currentStep = 1;
+    this.formData = {
+      name: "",
+      notes: "",
+      tags: [],
+      files: [],
+      terminalCollections: [],
+      scripts: []
+    };
   }
 
-  async show(mode: "create" | "update" = "create"): Promise<void> {
+  async show(mode: "create" | "update" | "resume" | "edit" = "create", session?: Session): Promise<void> {
     // Reset state for new session
     this.resetState();
     this.mode = mode;
 
-    if (mode === "update") {
-      // First, show session selection for update mode
-      const session = await this.selectSessionToUpdate();
-      if (!session) {
+    if (mode === "update" || mode === "resume" || mode === "edit") {
+      let targetSession: Session | undefined;
+      
+      if (session) {
+        // Use the provided session
+        targetSession = session;
+        console.log(
+          `SessionWebviewProvider: Using provided session "${targetSession.name}" with ID "${targetSession.id}"`
+        );
+      } else if (mode === "update") {
+        // Only for update mode, show session selection if no session provided
+        targetSession = await this.selectSessionToUpdate();
+        if (!targetSession) {
         console.log("SessionWebviewProvider: No session selected, cancelling");
         return; // User cancelled
+        }
       }
 
-      console.log(
-        `SessionWebviewProvider: Session selected, setting selectedSession to "${session.name}" with ID "${session.id}"`
-      );
-      this.selectedSession = session;
+      if (targetSession) {
+        this.selectedSession = targetSession;
+        
+        // Pre-populate form data for update/resume/edit mode
+        this.formData = {
+          name: targetSession.name,
+          notes: targetSession.notes || "",
+          tags: targetSession.tags || [],
+          files: targetSession.files || [],
+          terminalCollections: this.convertToObjectArray(targetSession.terminalCollections || []),
+          scripts: this.convertToObjectArray(targetSession.scripts || [])
+        };
+        
+        // For resume mode, start at step 1 to allow modifications
+        // For edit mode, start at step 1 to allow modifications
+        // For update mode, start at step 1 to allow modifications
+        this.currentStep = 1;
+      }
     }
 
     // Check Git state for uncommitted changes
     await this.checkGitState();
 
     // Create and show panel with warning if needed
-    const baseTitle = mode === "create" ? "Create New Session" : `Update Session: ${this.selectedSession?.name}`;
+    let baseTitle: string;
+    switch (mode) {
+      case "create":
+        baseTitle = "Create New Session";
+        break;
+      case "resume":
+        baseTitle = `Resume Session: ${this.selectedSession?.name}`;
+        break;
+      case "edit":
+        baseTitle = `Edit Session: ${this.selectedSession?.name}`;
+        break;
+      default:
+        baseTitle = `Update Session: ${this.selectedSession?.name}`;
+    }
     const title = this.hasUncommittedChanges ? `${baseTitle} ⚠️` : baseTitle;
     
     this.panel = vscode.window.createWebviewPanel(
@@ -80,118 +141,76 @@ export class SessionWebviewProvider {
         case "refreshFiles":
           this.refreshWebview();
           break;
+        case "nextStep":
+          this.currentStep = Math.min(this.currentStep + 1, 5);
+          break;
+        case "prevStep":
+          this.currentStep = Math.max(this.currentStep - 1, 1);
+          break;
+        case "goToStep":
+          this.currentStep = message.step;
+          break;
+        case "updateFormData":
+          this.formData = { ...this.formData, ...message.data };
+          break;
+        case "getTerminalCollections":
+          const collections = await this.getTerminalCollections();
+          this.panel?.webview.postMessage({
+            command: "terminalCollectionsData",
+            data: collections
+          });
+          break;
+        case "getScripts":
+          const scripts = await this.getScripts();
+          this.panel?.webview.postMessage({
+            command: "scriptsData",
+            data: scripts
+          });
+          break;
       }
     });
 
     // Handle panel disposal
     this.panel.onDidDispose(() => {
-      this.panel = undefined;
-      // Don't clear selectedSession here as it might be needed for save operations
-      // It will be cleared when the webview provider is destroyed or reset
+      this.resetState();
     });
   }
 
   private async selectSessionToUpdate(): Promise<Session | undefined> {
     try {
-      // Check if workspace is open
-      const workspaceFolders = vscode.workspace.workspaceFolders;
-      if (!workspaceFolders || workspaceFolders.length === 0) {
-        vscode.window.showErrorMessage("No workspace folder is open");
-        return undefined;
-      }
-
-      const projectRoot = workspaceFolders[0].uri.fsPath;
-
-      // Get available sessions for this project
+      const { ListSessions } = await import('@codestate/core');
       const listSessions = new ListSessions();
-      const sessionsResult = await listSessions.execute();
+      const sessionsResult = await listSessions.execute({});
 
       if (!sessionsResult.ok) {
         throw new Error("Failed to load sessions");
       }
 
-      console.log(
-        `SessionWebviewProvider: Found ${sessionsResult.value.length} total sessions`
-      );
-      console.log(
-        `SessionWebviewProvider: Looking for sessions with projectRoot: "${projectRoot}"`
-      );
-
-      sessionsResult.value.forEach((session) => {
-        console.log(
-          `SessionWebviewProvider: Session "${session.name}" has projectRoot: "${session.projectRoot}"`
-        );
-      });
-
-      const normalizedProjectRoot = projectRoot.toLowerCase();
-      const sessions = sessionsResult.value.filter(
-        (session) => session.projectRoot.toLowerCase() === normalizedProjectRoot
-      );
-
-      console.log(
-        `SessionWebviewProvider: Found ${sessions.length} sessions for current project`
-      );
-
+      const sessions = sessionsResult.value;
       if (sessions.length === 0) {
-        vscode.window.showInformationMessage(
-          "No sessions found for this project. Save a session first."
-        );
+        vscode.window.showInformationMessage("No sessions found to update.");
         return undefined;
       }
 
       // Show session picker
-      const sessionItems = sessions.map((session) => {
-        // Convert updatedAt to Date if it's a string
-        const updatedAt =
-          typeof session.updatedAt === "string"
-            ? new Date(session.updatedAt)
-            : session.updatedAt;
-        const formattedDate =
-          updatedAt instanceof Date
-            ? updatedAt.toLocaleDateString()
-            : "Unknown date";
-
-        return {
-          label: session.name,
-          description: session.notes || "",
-          detail: `Updated: ${formattedDate} | Tags: ${session.tags.join(
-            ", "
-          )}`,
-          session,
-        };
-      });
-
-      const selected = await vscode.window.showQuickPick(sessionItems, {
+      const sessionNames = sessions.map(s => s.name);
+      const selectedName = await vscode.window.showQuickPick(sessionNames, {
         placeHolder: "Select a session to update",
-        matchOnDescription: true,
-        matchOnDetail: true,
+        ignoreFocusOut: true
       });
 
-      if (!selected || !selected.session) {
-        console.log(
-          "SessionWebviewProvider: No session selected or session is invalid"
-        );
-        return undefined;
+      if (!selectedName) {
+        return undefined; // User cancelled
       }
 
-      // Validate the selected session has required properties
-      if (!selected.session.id) {
-        console.error("SessionWebviewProvider: Selected session is missing ID");
-        vscode.window.showErrorMessage(
-          "Selected session is invalid (missing ID). Please try again."
-        );
-        return undefined;
+      const selectedSession = sessions.find(s => s.name === selectedName);
+      if (!selectedSession) {
+        throw new Error("Selected session not found");
       }
 
-      console.log(
-        `SessionWebviewProvider: Selected session "${selected.session.name}" with ID "${selected.session.id}"`
-      );
-      return selected.session;
+      return selectedSession;
     } catch (error) {
-      const extensionError =
-        error instanceof ExtensionError
-          ? error
-          : ExtensionError.fromError(
+      const extensionError = ExtensionError.fromError(
               error instanceof Error ? error : new Error(String(error)),
               undefined,
               ErrorContext.SESSION_MANAGEMENT
@@ -214,7 +233,7 @@ export class SessionWebviewProvider {
       }
 
       const projectRoot = workspaceFolders[0].uri.fsPath;
-      const { GitService } = await import('codestate-core');
+      const { GitService } = await import('@codestate/core');
       const gitService = new GitService(projectRoot);
 
       // Check if this is a Git repository
@@ -258,7 +277,7 @@ export class SessionWebviewProvider {
         `SessionWebviewProvider: Captured ${fileStates.length} file states`
       );
 
-      // Prepare session data
+      // Prepare session data with new fields
       const sessionDataToPass = {
         name: sessionData.name,
         notes: sessionData.notes,
@@ -269,6 +288,9 @@ export class SessionWebviewProvider {
               .filter((tag: string) => tag.length > 0)
           : [],
         files: fileStates,
+        terminalCommands: [], // Pass as empty array by default
+        terminalCollections: sessionData.terminalCollections || [],
+        scripts: sessionData.scripts || []
       };
 
       console.log("SessionWebviewProvider: Session data prepared:", sessionDataToPass);
@@ -276,13 +298,24 @@ export class SessionWebviewProvider {
       // Execute the appropriate command based on mode with session data
       if (this.mode === "create") {
         await vscode.commands.executeCommand("codestate.saveSession", "create", undefined, sessionDataToPass);
+      } else if (this.mode === "resume" || this.mode === "edit") {
+        // For resume and edit modes, we're essentially updating the session
+        console.log(`SessionWebviewProvider: ${this.mode} mode - selectedSession:`, this.selectedSession);
+        if (!this.selectedSession) {
+          throw new Error(`No session selected for ${this.mode}. Please select a session first.`);
+        }
+        await vscode.commands.executeCommand("codestate.updateSession", "update", this.selectedSession, sessionDataToPass);
       } else {
+        // Update mode
         console.log("SessionWebviewProvider: Update mode - selectedSession:", this.selectedSession);
         if (!this.selectedSession) {
           throw new Error("No session selected for update. Please select a session first.");
         }
         await vscode.commands.executeCommand("codestate.updateSession", "update", this.selectedSession, sessionDataToPass);
       }
+
+      // The SessionCommand will handle cache clearing and refresh
+      // No need to duplicate the operations here
 
       // Close the panel after the command has been executed
       this.panel?.dispose();
@@ -302,9 +335,13 @@ export class SessionWebviewProvider {
         true
       );
 
+      const actionText = this.mode === "create" ? "create" : 
+                        this.mode === "resume" ? "resume" : 
+                        this.mode === "edit" ? "edit" : "update";
+
       vscode.window
         .showErrorMessage(
-          `Failed to ${this.mode} session. Check the output panel for details.`,
+          `Failed to ${actionText} session. Check the output panel for details.`,
           "Show Details",
           "Dismiss"
         )
@@ -407,6 +444,7 @@ export class SessionWebviewProvider {
             left: 0,
           },
           isActive: document === vscode.window.activeTextEditor?.document,
+          position: fileStates.length, // Add position based on order
         });
       }
     });
@@ -442,6 +480,7 @@ export class SessionWebviewProvider {
                       left: 0,
                     },
                     isActive: false,
+                    position: fileStates.length, // Add position based on order
                   });
                   processedPaths.add(fullPath);
                 }
@@ -561,35 +600,99 @@ export class SessionWebviewProvider {
     return `<ul>${fileList}</ul>`;
   }
 
+  private async getTerminalCollections(): Promise<any[]> {
+    try {
+      const { ListTerminalCollections } = await import('@codestate/core');
+      const listCollections = new ListTerminalCollections();
+      const result = await listCollections.execute();
+      
+      if (result.ok) {
+        return result.value.map(collection => ({
+          id: collection.id,
+          name: collection.name,
+          description: `Runs on: ${collection.lifecycle.join(', ')}`,
+          scriptCount: collection.scripts.length
+        }));
+      }
+      return [];
+    } catch (error) {
+      console.warn('Failed to get terminal collections:', error);
+      return [];
+    }
+  }
+
+  private async getScripts(): Promise<any[]> {
+    try {
+      const { GetScripts } = await import('@codestate/core');
+      const getScripts = new GetScripts();
+      const result = await getScripts.execute();
+      
+      if (result.ok) {
+        return result.value.map(script => ({
+          id: script.id,
+          name: script.name,
+          description: script.script || 'No description available',
+          priority: 1
+        }));
+      }
+      return [];
+    } catch (error) {
+      console.warn('Failed to get scripts:', error);
+      return [];
+    }
+  }
+
+  private getSaveButtonText(): string {
+    switch (this.mode) {
+      case "create":
+        return "Create Session";
+      case "resume":
+        return "Resume Session";
+      case "edit":
+        return "Save Changes";
+      default:
+        return "Update Session";
+    }
+  }
+
+  private convertToObjectArray(items: string[] | any[]): any[] {
+    // Convert array of strings (IDs) to array of objects with id and name
+    if (items.length === 0) return [];
+    
+    if (typeof items[0] === 'string') {
+      // Convert IDs to objects
+      return items.map(id => ({ id, name: id }));
+    }
+    
+    // Already in object format, return as is
+    return items;
+  }
+
   private getWebviewContent(): string {
-    // Get categorized files for display (only for update mode)
-    const categorizedFiles =
-      this.mode === "update" ? this.categorizeFiles() : null;
-
-    // Pre-populate with existing session data (only for update mode)
-    const sessionName =
-      this.mode === "update" ? this.selectedSession?.name || "" : "";
-    const sessionNotes =
-      this.mode === "update" ? this.selectedSession?.notes || "" : "";
-    const sessionTags =
-      this.mode === "update"
-        ? this.selectedSession?.tags?.join(", ") || ""
-        : "";
-
-    const title =
-      this.mode === "create"
-        ? "Create New Session"
-        : `Update Session: ${sessionName}`;
-    const subtitle =
-      this.mode === "create"
-        ? "Create a new development session."
-        : "Update session details and capture current state.";
-    const buttonText =
-      this.mode === "create" ? "Create Session" : "Update Session";
+    let title: string;
+    let subtitle: string;
+    
+    switch (this.mode) {
+      case "create":
+        title = "Create New Session";
+        subtitle = "Create a new development session.";
+        break;
+      case "resume":
+        title = `Resume Session: ${this.selectedSession?.name}`;
+        subtitle = "Resume and modify an existing session.";
+        break;
+      case "edit":
+        title = `Edit Session: ${this.selectedSession?.name}`;
+        subtitle = "Edit session details and capture current state.";
+        break;
+      default:
+        title = `Update Session: ${this.selectedSession?.name}`;
+        subtitle = "Update session details and capture current state.";
+    }
     
     // Add warning message if there are uncommitted changes
     const warningMessage = this.hasUncommittedChanges 
-      ? '<div class="warning-banner">You have uncommitted changes in your Git repository. Consider committing or stashing before saving this session.</div>'
+      ? '<div class="warning-banner">⚠️ You have uncommitted changes in your Git repository. Consider committing or stashing before saving this session.</div>'
       : '';
 
     return `
@@ -642,14 +745,69 @@ export class SessionWebviewProvider {
             font-style: italic;
           }
 
+          .progress-bar {
+            display: flex;
+            justify-content: space-between;
+            padding: 0 20px 20px 20px;
+            background-color: var(--vscode-panel-background);
+            border-bottom: 1px solid var(--vscode-panel-border);
+          }
+
+          .step {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex: 1;
+            max-width: 120px;
+          }
+
+          .step-number {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+          }
+
+          .step-number.active {
+            background-color: var(--vscode-button-background);
+            color: var(--vscode-button-foreground);
+          }
+
+          .step-number.completed {
+            background-color: var(--vscode-progressBar-background);
+            color: var(--vscode-progressBar-foreground);
+          }
+
+          .step-number.inactive {
+            background-color: var(--vscode-input-background);
+            color: var(--vscode-descriptionForeground);
+            border: 2px solid var(--vscode-panel-border);
+          }
+
+          .step-label {
+            font-size: 0.8em;
+            text-align: center;
+            color: var(--vscode-descriptionForeground);
+            line-height: 1.2;
+          }
+
+          .step-label.active {
+            color: var(--vscode-editor-foreground);
+            font-weight: 500;
+          }
+
           .form-container {
             flex: 1;
             overflow-y: auto;
             padding: 20px;
             scrollbar-width: thin;
             scrollbar-color: var(--vscode-scrollbarSlider-background) transparent;
-            display: flex;
-            gap: 20px;
           }
 
           .form-container::-webkit-scrollbar {
@@ -669,40 +827,50 @@ export class SessionWebviewProvider {
             background-color: var(--vscode-scrollbarSlider-hoverBackground);
           }
 
-          .left-column {
-            flex: 1;
-            min-width: 0;
+          .step-content {
+            max-width: 800px;
+            margin: 0 auto;
           }
 
-          .right-column {
-            width: 300px;
-            flex-shrink: 0;
+          .step-panel {
+            animation: fadeIn 0.3s ease-in-out;
+          }
+
+          @keyframes fadeIn {
+            from {
+              opacity: 0;
+              transform: translateY(10px);
+            }
+            to {
+              opacity: 1;
+              transform: translateY(0);
+            }
           }
 
           .section {
             margin-bottom: 25px;
-            padding: 15px;
+            padding: 20px;
             background-color: var(--vscode-editor-background);
             border: 1px solid var(--vscode-panel-border);
-            border-radius: 4px;
+            border-radius: 6px;
           }
 
           .section h2 {
-            margin: 0 0 15px 0;
+            margin: 0 0 20px 0;
             color: var(--vscode-editor-foreground);
-            font-size: 1.2em;
+            font-size: 1.3em;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 10px;
           }
 
           .form-group {
-            margin-bottom: 15px;
+            margin-bottom: 20px;
           }
 
           .form-group label {
             display: block;
-            margin-bottom: 5px;
+            margin-bottom: 8px;
             font-weight: 500;
             color: var(--vscode-editor-foreground);
           }
@@ -710,7 +878,7 @@ export class SessionWebviewProvider {
           .form-group input[type="text"],
           .form-group textarea {
             width: 100%;
-            padding: 8px 12px;
+            padding: 10px 12px;
             border: 1px solid var(--vscode-input-border);
             border-radius: 4px;
             background-color: var(--vscode-input-background);
@@ -722,7 +890,7 @@ export class SessionWebviewProvider {
 
           .form-group textarea {
             resize: vertical;
-            min-height: 80px;
+            min-height: 100px;
           }
 
                      .form-group input:focus,
@@ -737,10 +905,94 @@ export class SessionWebviewProvider {
              cursor: not-allowed;
            }
 
+          .description {
+            font-size: 0.9em;
+            color: var(--vscode-descriptionForeground);
+            margin-top: 6px;
+            font-style: italic;
+          }
+
+          .error {
+            color: var(--vscode-errorForeground);
+            font-size: 0.9em;
+            margin-top: 6px;
+            display: none;
+          }
+
+          .checkbox-group {
+            margin-bottom: 15px;
+          }
+
+          .checkbox-item {
+            display: flex;
+            align-items: flex-start;
+            padding: 12px;
+            margin-bottom: 8px;
+            background-color: var(--vscode-list-hoverBackground);
+            border: 1px solid var(--vscode-panel-border);
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+          }
+
+          .checkbox-item:hover {
+            background-color: var(--vscode-list-activeSelectionBackground);
+            border-color: var(--vscode-focusBorder);
+          }
+
+          .checkbox-item.selected {
+            background-color: var(--vscode-list-activeSelectionBackground);
+            border-color: var(--vscode-focusBorder);
+          }
+
+          .checkbox-item input[type="checkbox"] {
+            margin-right: 12px;
+            margin-top: 2px;
+          }
+
+          .checkbox-item-content {
+            flex: 1;
+          }
+
+          .checkbox-item-name {
+            font-weight: 500;
+            color: var(--vscode-editor-foreground);
+            margin-bottom: 4px;
+          }
+
+          .checkbox-item-description {
+            font-size: 0.9em;
+            color: var(--vscode-descriptionForeground);
+            line-height: 1.4;
+          }
+
+          .checkbox-item-meta {
+            font-size: 0.8em;
+            color: var(--vscode-descriptionForeground);
+            margin-top: 4px;
+          }
+
+          .search-box {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--vscode-input-border);
+            border-radius: 4px;
+            background-color: var(--vscode-input-background);
+            color: var(--vscode-input-foreground);
+            font-family: inherit;
+            font-size: inherit;
+            margin-bottom: 15px;
+            box-sizing: border-box;
+          }
+
+          .search-box:focus {
+            outline: none;
+            border-color: var(--vscode-focusBorder);
+           }
+
           .buttons {
             display: flex;
-            justify-content: flex-end;
-            gap: 10px;
+            justify-content: space-between;
             padding: 20px;
             border-top: 1px solid var(--vscode-panel-border);
             background-color: var(--vscode-panel-background);
@@ -748,13 +1000,14 @@ export class SessionWebviewProvider {
           }
 
           .btn {
-            padding: 8px 16px;
+            padding: 10px 20px;
             border: none;
             border-radius: 4px;
             font-family: inherit;
             font-size: inherit;
             cursor: pointer;
-            transition: background-color 0.2s;
+            transition: all 0.2s;
+            font-weight: 500;
           }
 
           .btn-primary {
@@ -766,26 +1019,71 @@ export class SessionWebviewProvider {
             background-color: var(--vscode-button-hoverBackground);
           }
 
+          .btn-primary:disabled {
+            background-color: var(--vscode-button-secondaryBackground);
+            color: var(--vscode-button-secondaryForeground);
+            cursor: not-allowed;
+          }
+
           .btn-secondary {
             background-color: var(--vscode-button-secondaryBackground);
             color: var(--vscode-button-secondaryForeground);
+            border: 1px solid var(--vscode-button-secondaryBorder);
           }
 
           .btn-secondary:hover {
             background-color: var(--vscode-button-secondaryHoverBackground);
           }
 
-          .description {
-            font-size: 0.9em;
-            color: var(--vscode-descriptionForeground);
-            margin-top: 5px;
+          .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
           }
 
-          .error {
-            color: var(--vscode-errorForeground);
+          .warning-banner {
+            background-color: var(--vscode-inputValidation-warningBackground);
+            color: var(--vscode-inputValidation-warningForeground);
+            border: 1px solid var(--vscode-inputValidation-warningBorder);
+            padding: 12px 20px;
+            margin: 0;
             font-size: 0.9em;
-            margin-top: 5px;
-            display: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+          }
+
+          .summary-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--vscode-panel-border);
+          }
+
+          .summary-item:last-child {
+            border-bottom: none;
+          }
+
+          .summary-label {
+            font-weight: 500;
+            color: var(--vscode-editor-foreground);
+          }
+
+          .summary-value {
+            color: var(--vscode-descriptionForeground);
+            text-align: right;
+            max-width: 60%;
+          }
+
+          .summary-section {
+            margin-bottom: 20px;
+          }
+
+          .summary-section h3 {
+            margin: 0 0 10px 0;
+            color: var(--vscode-editor-foreground);
+            font-size: 1.1em;
+            border-bottom: 1px solid var(--vscode-panel-border);
+            padding-bottom: 5px;
           }
 
           .opened-files {
@@ -830,28 +1128,12 @@ export class SessionWebviewProvider {
              text-align: center;
              padding: 20px;
            }
-
-           .warning-banner {
-             background-color: var(--vscode-inputValidation-warningBackground);
-             color: var(--vscode-inputValidation-warningForeground);
-             border: 1px solid var(--vscode-inputValidation-warningBorder);
-             padding: 12px 20px;
-             margin: 0;
-             font-size: 0.9em;
-             display: flex;
-             align-items: center;
-             gap: 8px;
-           }
-
-           .warning-banner::before {
-             content: "⚠️";
-             font-size: 1.1em;
-           }
         </style>
       </head>
       <body>
                  <div class="container">
            ${warningMessage}
+          
            <div class="header">
              <div>
                <h1>📝 ${title}</h1>
@@ -859,91 +1141,396 @@ export class SessionWebviewProvider {
              </div>
            </div>
 
+          <div class="progress-bar">
+            <div class="step" onclick="goToStep(1)">
+              <div class="step-number ${this.currentStep >= 1 ? (this.currentStep === 1 ? 'active' : 'completed') : 'inactive'}">1</div>
+              <div class="step-label ${this.currentStep === 1 ? 'active' : ''}">Basic Info</div>
+            </div>
+            <div class="step" onclick="goToStep(2)">
+              <div class="step-number ${this.currentStep >= 2 ? (this.currentStep === 2 ? 'active' : 'completed') : 'inactive'}">2</div>
+              <div class="step-label ${this.currentStep === 2 ? 'active' : ''}">Files</div>
+            </div>
+            <div class="step" onclick="goToStep(3)">
+              <div class="step-number ${this.currentStep >= 3 ? (this.currentStep === 3 ? 'active' : 'completed') : 'inactive'}">3</div>
+              <div class="step-label ${this.currentStep === 3 ? 'active' : ''}">Terminals</div>
+            </div>
+            <div class="step" onclick="goToStep(4)">
+              <div class="step-number ${this.currentStep >= 4 ? (this.currentStep === 4 ? 'active' : 'completed') : 'inactive'}">4</div>
+              <div class="step-label ${this.currentStep === 4 ? 'active' : ''}">Scripts</div>
+            </div>
+            <div class="step" onclick="goToStep(5)">
+              <div class="step-number ${this.currentStep >= 5 ? (this.currentStep === 5 ? 'active' : 'completed') : 'inactive'}">5</div>
+              <div class="step-label ${this.currentStep === 5 ? 'active' : ''}">Review</div>
+             </div>
+           </div>
+
           <div class="form-container">
-            <div class="left-column">
-              <form id="sessionForm">
-                <!-- Session Details Section -->
-                <div class="section">
-                  <h2>🎯 Session Details</h2>
-                  
-                  <div class="form-group">
-                    <label for="name">Session Name *</label>
-                    <input type="text" id="name" name="name" required placeholder="e.g., Feature Implementation, Bug Fix, Setup" value="${sessionName}" ${
-      this.mode === "update" ? "readonly" : ""
-    }>
-                    <div class="description">${
-                      this.mode === "update"
-                        ? "Session name cannot be changed during update"
-                        : "A descriptive name for your session"
-                    }</div>
-                    <div class="error" id="nameError">Session name is required</div>
+            <div class="step-content">
+              <!-- Step 1: Basic Session Information -->
+              <div class="step-panel" id="step1" style="display: ${this.currentStep === 1 ? 'block' : 'none'}">
+                ${this.getStep1Content()}
+              </div>
+              
+              <!-- Step 2: File State Capture -->
+              <div class="step-panel" id="step2" style="display: ${this.currentStep === 2 ? 'block' : 'none'}">
+                ${this.getStep2Content()}
                   </div>
 
-                  <div class="form-group">
-                    <label for="notes">Notes</label>
-                    <textarea id="notes" name="notes" placeholder="Optional notes about this session...">${sessionNotes}</textarea>
-                    <div class="description">Additional context or description for this session</div>
+              <!-- Step 3: Terminal Collections -->
+              <div class="step-panel" id="step3" style="display: ${this.currentStep === 3 ? 'block' : 'none'}">
+                ${this.getStep3Content()}
                   </div>
 
-                  <div class="form-group">
-                    <label for="tags">Tags</label>
-                    <input type="text" id="tags" name="tags" placeholder="feature, bugfix, setup (comma-separated)" value="${sessionTags}">
-                    <div class="description">Tags to help organize and find your sessions</div>
-                  </div>
-                </div>
-              </form>
+              <!-- Step 4: Scripts Selection -->
+              <div class="step-panel" id="step4" style="display: ${this.currentStep === 4 ? 'block' : 'none'}">
+                ${this.getStep4Content()}
             </div>
 
-            <div class="right-column">
-              <div class="section">
-                <h2>📂 Opened Files</h2>
-                <div class="opened-files">
-                  ${
-                    this.mode === "update"
-                      ? this.renderCategorizedFiles(categorizedFiles!)
-                      : this.renderSimpleFileList()
-                  }
-                </div>
-                <button type="button" class="btn btn-secondary" onclick="refreshFiles()" style="margin-top: 10px; width: 100%;">🔄 Refresh File List</button>
+              <!-- Step 5: Review & Confirm -->
+              <div class="step-panel" id="step5" style="display: ${this.currentStep === 5 ? 'block' : 'none'}">
+                ${this.getStep5Content()}
               </div>
             </div>
           </div>
 
           <div class="buttons">
-            <button type="button" class="btn btn-secondary" onclick="cancel()">Cancel</button>
-            <button type="submit" class="btn btn-primary" onclick="saveSession()">${buttonText}</button>
+            ${this.currentStep > 1 ? '<button type="button" class="btn btn-secondary" onclick="prevStep()">← Previous Step</button>' : '<div></div>'}
+            ${this.currentStep < 5 ? '<button type="button" class="btn btn-primary" onclick="nextStep()">Next Step →</button>' : '<button type="button" class="btn btn-primary" onclick="saveSession()">' + this.getSaveButtonText() + '</button>'}
           </div>
         </div>
 
         <script>
           const vscode = acquireVsCodeApi();
+          let formData = ${JSON.stringify(this.formData)};
+          let terminalCollections = [];
+          let scripts = [];
+          
+          // Ensure formData has the correct structure for storing both IDs and names
+          if (!formData.terminalCollections) {
+            formData.terminalCollections = [];
+          }
+          if (!formData.scripts) {
+            formData.scripts = [];
+          }
+          
+          // Migrate old data structure (if it was just IDs) to new structure (objects with id and name)
+          function migrateFormDataStructure() {
+            // Check if terminalCollections are just IDs and need migration
+            if (formData.terminalCollections.length > 0 && typeof formData.terminalCollections[0] === 'string') {
+              console.log('Migrating terminalCollections from IDs to objects');
+              formData.terminalCollections = formData.terminalCollections.map(id => ({ id, name: id }));
+            }
+            
+            // Check if scripts are just IDs and need migration
+            if (formData.scripts.length > 0 && typeof formData.scripts[0] === 'string') {
+              console.log('Migrating scripts from IDs to objects');
+              formData.scripts = formData.scripts.map(id => ({ id, name: id }));
+            }
+          }
+          
+          // Run migration if needed
+          migrateFormDataStructure();
 
-          // Handle form submission
-          document.getElementById('sessionForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            saveSession();
-          });
+          // Track current step in frontend
+          let currentStep = ${this.currentStep};
 
-                     function saveSession() {
-             const name = document.getElementById('name').value.trim();
-             const notes = document.getElementById('notes').value.trim();
-             const tags = document.getElementById('tags').value.trim();
+          // Step navigation
+          function nextStep() {
+            console.log('nextStep called, currentStep:', currentStep);
+            console.log('validateCurrentStep result:', validateCurrentStep());
+            
+            if (validateCurrentStep()) {
+              if (currentStep < 5) {
+                currentStep++;
+                console.log('Moving to step:', currentStep);
+                showStep(currentStep);
+                vscode.postMessage({ command: 'nextStep' });
+              } else {
+                console.log('Already at last step');
+              }
+            } else {
+              console.log('Validation failed, staying on step:', currentStep);
+            }
+          }
 
-             // Validate required fields (skip name validation in update mode since it's readonly)
-             const isUpdateMode = document.getElementById('name').readOnly;
-             if (!isUpdateMode && !name) {
+          function prevStep() {
+            if (currentStep > 1) {
+              currentStep--;
+              showStep(currentStep);
+              vscode.postMessage({ command: 'prevStep' });
+            }
+          }
+
+          function goToStep(step) {
+            // Allow navigation to any step that's been reached or is the current step
+            if (step <= currentStep) {
+              currentStep = step;
+              showStep(step);
+              vscode.postMessage({ command: 'goToStep', step: step });
+            }
+          }
+
+          function showStep(step) {
+            console.log('showStep called with step:', step);
+            
+            // Hide all steps
+            for (let i = 1; i <= 5; i++) {
+              const stepPanel = document.getElementById(\`step\${i}\`);
+              if (stepPanel) {
+                stepPanel.style.display = 'none';
+              }
+            }
+            
+            // Show the target step
+            const targetStep = document.getElementById(\`step\${step}\`);
+            if (targetStep) {
+              targetStep.style.display = 'block';
+              console.log('Step', step, 'is now visible');
+            } else {
+              console.error('Could not find step panel for step:', step);
+            }
+            
+            // Update progress bar
+            updateProgressBar(step);
+            
+            // Load step-specific data if needed
+            loadStepData(step);
+            
+            // Sync form data to visible fields
+            syncFormDataToFields();
+            
+            // Special handling for review step
+            if (step === 5) {
+              console.log('Updating review step with current form data');
+              updateReviewStep();
+            }
+          }
+
+          function syncFormDataToFields() {
+            console.log('syncFormDataToFields called, syncing formData to visible fields');
+            console.log('Current formData:', formData);
+            
+            // Sync name field
+            const nameField = document.getElementById('name');
+            if (nameField && formData.name) {
+              nameField.value = formData.name;
+              console.log('Synced name field with:', formData.name);
+            }
+            
+            // Sync notes field
+            const notesField = document.getElementById('notes');
+            if (notesField && formData.notes) {
+              notesField.value = formData.notes;
+              console.log('Synced notes field with:', formData.notes);
+            }
+            
+            // Sync tags field
+            const tagsField = document.getElementById('tags');
+            if (tagsField && formData.tags && formData.tags.length > 0) {
+              tagsField.value = formData.tags.join(', ');
+              console.log('Synced tags field with:', formData.tags.join(', '));
+            }
+          }
+
+          function updateProgressBar(activeStep) {
+            // Update step numbers
+            for (let i = 1; i <= 5; i++) {
+              const stepNumber = document.querySelector(\`.step:nth-child(\${i}) .step-number\`);
+              const stepLabel = document.querySelector(\`.step:nth-child(\${i}) .step-label\`);
+              
+              if (stepNumber && stepLabel) {
+                if (i < activeStep) {
+                  stepNumber.className = 'step-number completed';
+                  stepLabel.className = 'step-label';
+                } else if (i === activeStep) {
+                  stepNumber.className = 'step-number active';
+                  stepLabel.className = 'step-label active';
+                } else {
+                  stepNumber.className = 'step-number inactive';
+                  stepLabel.className = 'step-label';
+                }
+              }
+            }
+            
+            // Update buttons
+            updateButtons(activeStep);
+          }
+
+          function updateButtons(activeStep) {
+            const buttonsContainer = document.querySelector('.buttons');
+            if (buttonsContainer) {
+              const prevButton = buttonsContainer.querySelector('.btn-secondary');
+              const nextButton = buttonsContainer.querySelector('.btn-primary');
+              
+              if (prevButton) {
+                prevButton.style.display = activeStep > 1 ? 'block' : 'none';
+              }
+              
+              if (nextButton) {
+                if (activeStep < 5) {
+                  nextButton.textContent = 'Next Step →';
+                  nextButton.onclick = nextStep;
+                } else {
+                  nextButton.textContent = '${this.getSaveButtonText()}';
+                  nextButton.onclick = saveSession;
+                }
+              }
+            }
+          }
+
+          function validateCurrentStep() {
+            console.log('validateCurrentStep called for step:', currentStep);
+            
+            if (currentStep === 1) {
+              const name = document.getElementById('name')?.value?.trim();
+              console.log('Validating name field:', name);
+              if (!name) {
+                console.log('Name validation failed');
                document.getElementById('nameError').style.display = 'block';
                document.getElementById('name').focus();
-               return;
+                return false;
              }
-
              document.getElementById('nameError').style.display = 'none';
+              console.log('Name validation passed');
+            }
+            
+            // For steps 2, 3, and 4, no validation is required
+            // Users can proceed freely through these steps
+            if (currentStep >= 2 && currentStep <= 4) {
+              console.log('No validation required for step:', currentStep);
+              return true;
+            }
+            
+            console.log('Validation passed for step:', currentStep);
+            return true;
+          }
+
+          function updateFormData() {
+            const name = document.getElementById('name')?.value?.trim() || '';
+            const notes = document.getElementById('notes')?.value?.trim() || '';
+            const tags = document.getElementById('tags')?.value?.trim() || '';
+            
+            formData.name = name;
+            formData.notes = notes;
+            formData.tags = tags ? tags.split(',').map(t => t.trim()).filter(t => t.length > 0) : [];
+            
+            // Update the form data in the extension
+            vscode.postMessage({ 
+              command: 'updateFormData', 
+              data: formData 
+            });
+            
+            // Update the review step if we're on it
+            if (currentStep === 5) {
+              updateReviewStep();
+            }
+          }
+
+          function updateReviewStep() {
+            console.log('updateReviewStep called, current formData:', formData);
+            
+            // Find the review content container within step5
+            const reviewContainer = document.getElementById('reviewContent');
+            if (reviewContainer) {
+              // Generate review content with current form data
+              const fileStates = []; // This would need to be captured from the extension
+              const categorizedFiles = null; // This would need to be captured from the extension
+              
+              const reviewContent = generateReviewContent(formData, fileStates, categorizedFiles);
+              reviewContainer.innerHTML = reviewContent;
+              console.log('Review step updated with content');
+            } else {
+              console.error('Could not find review content container');
+            }
+          }
+
+          function generateReviewContent(formData, fileStates, categorizedFiles) {
+            console.log('generateReviewContent called with formData:', formData);
+            
+            // Ensure we have safe access to formData properties
+            const safeFormData = {
+              name: formData.name || 'Not specified',
+              notes: formData.notes || 'None',
+              tags: Array.isArray(formData.tags) ? formData.tags : [],
+              terminalCollections: Array.isArray(formData.terminalCollections) ? formData.terminalCollections : [],
+              scripts: Array.isArray(formData.scripts) ? formData.scripts : []
+            };
+            
+            console.log('Safe form data for review:', safeFormData);
+            
+            return \`
+              <div class="summary-section">
+                <h3>📋 Basic Information</h3>
+                <div class="summary-item">
+                  <span class="summary-label">Name:</span>
+                  <span class="summary-value">\${safeFormData.name}</span>
+                </div>
+                <div class="summary-item">
+                  <span class="summary-label">Notes:</span>
+                  <span class="summary-value">\${safeFormData.notes}</span>
+                </div>
+                <div class="summary-item">
+                  <span class="summary-label">Tags:</span>
+                  <span class="summary-value">\${safeFormData.tags.length > 0 ? safeFormData.tags.join(', ') : 'None'}</span>
+                </div>
+              </div>
+
+              <div class="summary-section">
+                <h3>📂 File State</h3>
+                <div class="summary-item">
+                  <span class="summary-label">Open Files:</span>
+                  <span class="summary-value">\${fileStates ? fileStates.length : 0} files</span>
+                </div>
+              </div>
+
+              <div class="summary-section">
+                <h3>🚀 Terminal Collections</h3>
+                <div class="summary-item">
+                  <span class="summary-label">Selected:</span>
+                  <span class="summary-value">\${safeFormData.terminalCollections.length} collections</span>
+                </div>
+                \${safeFormData.terminalCollections.length > 0 ? \`
+                <div class="summary-item">
+                  <span class="summary-label">Collections:</span>
+                  <span class="summary-value">\${safeFormData.terminalCollections.map(c => c.name).join(', ')}</span>
+                </div>
+                \` : ''}
+              </div>
+
+              <div class="summary-section">
+                <h3>📜 Scripts</h3>
+                <div class="summary-item">
+                  <span class="summary-label">Selected:</span>
+                  <span class="summary-value">\${safeFormData.scripts.length} scripts</span>
+                </div>
+                \${safeFormData.scripts.length > 0 ? \`
+                <div class="summary-item">
+                  <span class="summary-label">Scripts:</span>
+                  <span class="summary-value">\${safeFormData.scripts.map(s => s.name).join(', ')}</span>
+                </div>
+                \` : ''}
+              </div>
+            \`;
+          }
+
+          function saveSession() {
+            updateFormData();
+            
+            // Extract just the IDs for the API call (since the API expects IDs)
+            const terminalCollectionIds = formData.terminalCollections.map(c => c.id);
+            const scriptIds = formData.scripts.map(s => s.id);
 
             const sessionData = {
-              name: name,
-              notes: notes || '',
-              tags: tags || ''
+              name: formData.name,
+              notes: formData.notes,
+              tags: formData.tags.join(', '),
+              terminalCollections: terminalCollectionIds,
+              scripts: scriptIds
             };
+
+            console.log('Saving session with data:', sessionData);
+            console.log('Original formData.terminalCollections:', formData.terminalCollections);
+            console.log('Original formData.scripts:', formData.scripts);
 
             vscode.postMessage({
               command: 'saveSession',
@@ -952,24 +1539,354 @@ export class SessionWebviewProvider {
           }
 
           function cancel() {
-            vscode.postMessage({
-              command: 'cancel'
-            });
+            vscode.postMessage({ command: 'cancel' });
           }
 
           function refreshFiles() {
-            vscode.postMessage({
-              command: 'refreshFiles'
-            });
+            vscode.postMessage({ command: 'refreshFiles' });
           }
 
-          // Focus on name field when page loads
+          function toggleTerminalCollection(id) {
+            console.log('toggleTerminalCollection called with id:', id);
+            
+            // Find the collection object to get the name
+            const collection = terminalCollections.find(c => c.id === id);
+            if (!collection) {
+              console.error('Collection not found for id:', id);
+              return;
+            }
+            
+            // Check if already selected
+            const existingIndex = formData.terminalCollections.findIndex(c => c.id === id);
+            if (existingIndex > -1) {
+              // Remove from selection
+              formData.terminalCollections.splice(existingIndex, 1);
+              console.log('Removed collection:', collection.name);
+            } else {
+              // Add to selection with both id and name
+              formData.terminalCollections.push({
+                id: id,
+                name: collection.name
+              });
+              console.log('Added collection:', collection.name);
+            }
+            
+            console.log('Updated terminalCollections:', formData.terminalCollections);
+            updateFormData();
+            renderTerminalCollections();
+          }
+
+          function toggleScript(id) {
+            console.log('toggleScript called with id:', id);
+            
+            // Find the script object to get the name
+            const script = scripts.find(s => s.id === id);
+            if (!script) {
+              console.error('Script not found for id:', id);
+              return;
+            }
+            
+            // Check if already selected
+            const existingIndex = formData.scripts.findIndex(s => s.id === id);
+            if (existingIndex > -1) {
+              // Remove from selection
+              formData.scripts.splice(existingIndex, 1);
+              console.log('Removed script:', script.name);
+            } else {
+              // Add to selection with both id and name
+              formData.scripts.push({
+                id: id,
+                name: script.name
+              });
+              console.log('Added script:', script.name);
+            }
+            
+            console.log('Updated scripts:', formData.scripts);
+            updateFormData();
+            renderScripts();
+          }
+
+          function renderTerminalCollections() {
+            const container = document.getElementById('terminalCollectionsContainer');
+            if (!container) return;
+            
+            container.innerHTML = terminalCollections.map(collection => {
+              // Check if this collection is selected (using the new object structure)
+              const isSelected = formData.terminalCollections.some(c => c.id === collection.id);
+              
+              return \`
+                <div class="checkbox-item \${isSelected ? 'selected' : ''}" onclick="toggleTerminalCollection('\${collection.id}')">
+                  <input type="checkbox" \${isSelected ? 'checked' : ''} readonly>
+                  <div class="checkbox-item-content">
+                    <div class="checkbox-item-name">\${collection.name}</div>
+                    <div class="checkbox-item-description">\${collection.description}</div>
+                    <div class="checkbox-item-meta">\${collection.scriptCount} scripts</div>
+                  </div>
+                </div>
+              \`;
+            }).join('');
+          }
+
+          function renderScripts() {
+            const container = document.getElementById('scriptsContainer');
+            if (!container) return;
+            
+            container.innerHTML = scripts.map(script => {
+              // Check if this script is selected (using the new object structure)
+              const isSelected = formData.scripts.some(s => s.id === script.id);
+              
+              return \`
+                <div class="checkbox-item \${isSelected ? 'selected' : ''}" onclick="toggleScript('\${script.id}')">
+                  <input type="checkbox" \${isSelected ? 'checked' : ''} readonly>
+                  <div class="checkbox-item-content">
+                    <div class="checkbox-item-name">\${script.name}</div>
+                    <div class="checkbox-item-description">\${script.description}</div>
+                  </div>
+                </div>
+              \`;
+            }).join('');
+          }
+
+          // Load data when step changes
+          function loadStepData(step) {
+            if (step === 3 && terminalCollections.length === 0) {
+              vscode.postMessage({ command: 'getTerminalCollections' });
+            } else if (step === 4 && scripts.length === 0) {
+              vscode.postMessage({ command: 'getScripts' });
+            }
+          }
+
+          // Handle messages from extension
+          window.addEventListener('message', event => {
+            const message = event.data;
+            switch (message.command) {
+              case 'terminalCollectionsData':
+                terminalCollections = message.data;
+                console.log('Received terminal collections data:', terminalCollections);
+                updateTerminalCollectionNames();
+                renderTerminalCollections();
+                break;
+              case 'scriptsData':
+                scripts = message.data;
+                console.log('Received scripts data:', scripts);
+                updateScriptNames();
+                renderScripts();
+                break;
+              case 'stepUpdated':
+                // Extension has confirmed the step change
+                console.log('Extension confirmed step update to:', message.step);
+                break;
+            }
+          });
+          
+          // Update names in formData when data is loaded
+          function updateTerminalCollectionNames() {
+            formData.terminalCollections.forEach(collection => {
+              const loadedCollection = terminalCollections.find(c => c.id === collection.id);
+              if (loadedCollection) {
+                collection.name = loadedCollection.name;
+              }
+            });
+            console.log('Updated terminal collection names:', formData.terminalCollections);
+          }
+          
+          function updateScriptNames() {
+            formData.scripts.forEach(script => {
+              const loadedScript = scripts.find(s => s.id === script.id);
+              if (loadedScript) {
+                script.name = loadedScript.name;
+              }
+            });
+            console.log('Updated script names:', formData.scripts);
+          }
+
+          // Initialize
           document.addEventListener('DOMContentLoaded', function() {
-            document.getElementById('name').focus();
+            console.log('DOMContentLoaded, initializing with currentStep:', currentStep);
+            console.log('Initial formData:', formData);
+            
+            // Initialize the current step
+            updateProgressBar(currentStep);
+            updateButtons(currentStep);
+            loadStepData(currentStep);
+            
+            // If we're starting on step 5, update the review step
+            if (currentStep === 5) {
+              console.log('Starting on step 5, updating review step');
+              updateReviewStep();
+            }
+            
+            if (currentStep === 1) {
+              document.getElementById('name')?.focus();
+            }
+          });
+
+          // Update form data on input changes
+          document.addEventListener('input', function(e) {
+            if (e.target.matches('input, textarea')) {
+              updateFormData();
+            }
           });
         </script>
       </body>
       </html>
+    `;
+  }
+
+
+
+  private getStep1Content(): string {
+    const sessionName = this.mode === "update" ? this.selectedSession?.name || "" : "";
+    const sessionNotes = this.mode === "update" ? this.selectedSession?.notes || "" : "";
+    const sessionTags = this.mode === "update" ? this.selectedSession?.tags?.join(", ") || "" : "";
+
+    return `
+      <div class="section">
+        <h2>🎯 Session Details</h2>
+        
+        <div class="form-group">
+          <label for="name">Session Name *</label>
+          <input type="text" id="name" name="name" required placeholder="e.g., Feature Implementation, Bug Fix, Setup" value="${this.formData.name || sessionName}" ${this.mode === "update" ? "readonly" : ""}>
+          <div class="description">${this.mode === "update" ? "Session name cannot be changed during update" : "A descriptive name for your session"}</div>
+          <div class="error" id="nameError">Session name is required</div>
+        </div>
+
+        <div class="form-group">
+          <label for="notes">Notes</label>
+          <textarea id="notes" name="notes" placeholder="Optional notes about this session...">${this.formData.notes || sessionNotes}</textarea>
+          <div class="description">Additional context or description for this session</div>
+        </div>
+
+        <div class="form-group">
+          <label for="tags">Tags</label>
+          <input type="text" id="tags" name="tags" placeholder="feature, bugfix, setup (comma-separated)" value="${this.formData.tags.length > 0 ? this.formData.tags.join(', ') : sessionTags}">
+          <div class="description">Tags to help organize and find your sessions</div>
+        </div>
+      </div>
+    `;
+  }
+
+  private getStep2Content(): string {
+    const categorizedFiles = this.mode === "update" ? this.categorizeFiles() : null;
+    
+    return `
+      <div class="section">
+        <h2>📂 File State Capture</h2>
+        <p>Currently open files in your workspace:</p>
+        
+        <div class="opened-files">
+          ${this.mode === "update" ? this.renderCategorizedFiles(categorizedFiles!) : this.renderSimpleFileList()}
+        </div>
+        
+        <button type="button" class="btn btn-secondary" onclick="refreshFiles()" style="margin-top: 15px;">🔄 Refresh File List</button>
+      </div>
+    `;
+  }
+
+  private getStep3Content(): string {
+    return `
+      <div class="section">
+        <h2>🚀 Terminal Collections</h2>
+        <p>Select terminal collections to execute when resuming this session:</p>
+        
+        <input type="text" class="search-box" placeholder="Search collections..." onkeyup="filterCollections(this.value)">
+        
+        <div id="terminalCollectionsContainer">
+          <div style="text-align: center; padding: 20px; color: var(--vscode-descriptionForeground);">
+            Loading terminal collections...
+          </div>
+        </div>
+        
+        <div class="description">
+          Terminal collections will spawn terminals and execute their associated scripts automatically when resuming the session.
+        </div>
+      </div>
+    `;
+  }
+
+  private getStep4Content(): string {
+    return `
+      <div class="section">
+        <h2>📜 Scripts Selection</h2>
+        <p>Select individual scripts to execute when resuming this session:</p>
+        
+        <input type="text" class="search-box" placeholder="Search scripts..." onkeyup="filterScripts(this.value)">
+        
+        <div id="scriptsContainer">
+          <div style="text-align: center; padding: 20px; color: var(--vscode-descriptionForeground);">
+            Loading scripts...
+          </div>
+        </div>
+        
+        <div class="description">
+          Scripts will be executed in priority order when resuming the session. These are separate from terminal collection scripts.
+        </div>
+      </div>
+    `;
+  }
+
+  private getStep5Content(): string {
+    const fileStates = this.captureFileStates();
+    const categorizedFiles = this.mode === "update" ? this.categorizeFiles() : null;
+    
+    return `
+      <div class="section">
+        <h2>✅ Review & Confirm</h2>
+        
+        <div id="reviewContent">
+          <div class="summary-section">
+            <h3>📋 Basic Information</h3>
+            <div class="summary-item">
+              <span class="summary-label">Name:</span>
+              <span class="summary-value">${this.formData.name}</span>
+            </div>
+            <div class="summary-item">
+              <span class="summary-label">Notes:</span>
+              <span class="summary-value">${this.formData.notes || 'None'}</span>
+            </div>
+            <div class="summary-item">
+              <span class="summary-label">Tags:</span>
+              <span class="summary-value">${this.formData.tags.length > 0 ? this.formData.tags.join(', ') : 'None'}</span>
+            </div>
+          </div>
+
+          <div class="summary-section">
+            <h3>📂 File State</h3>
+            <div class="summary-item">
+              <span class="summary-label">Open Files:</span>
+              <span class="summary-value">${fileStates.length} files</span>
+            </div>
+            ${this.mode === "update" && categorizedFiles ? `
+            <div class="summary-item">
+              <span class="summary-label">Changes:</span>
+              <span class="summary-value">${categorizedFiles.new.length} new, ${categorizedFiles.removed.length} removed, ${categorizedFiles.unchanged.length} unchanged</span>
+            </div>
+            ` : ''}
+          </div>
+
+          <div class="summary-section">
+            <h3>🚀 Terminal Collections</h3>
+            <div class="summary-item">
+              <span class="summary-label">Selected:</span>
+              <span class="summary-value">${this.formData.terminalCollections.length} collections</span>
+            </div>
+          </div>
+
+          <div class="summary-section">
+            <h3>📜 Scripts</h3>
+            <div class="summary-item">
+              <span class="summary-label">Selected:</span>
+              <span class="summary-value">${this.formData.scripts.length} scripts</span>
+            </div>
+          </div>
+
+          ${this.hasUncommittedChanges ? `
+          <div class="warning-banner" style="margin-top: 20px;">
+            ⚠️ Git Status: Uncommitted changes detected
+          </div>
+          ` : ''}
+        </div>
+      </div>
     `;
   }
 
@@ -981,7 +1898,6 @@ export class SessionWebviewProvider {
     }
 
     const fileList = openedFiles.map((file) => `<li>${file}</li>`).join("");
-
     return `<ul>${fileList}</ul>`;
   }
 }

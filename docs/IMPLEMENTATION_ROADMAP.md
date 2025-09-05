@@ -26,7 +26,7 @@ Create the foundational types that extend the CodeState Core types:
 
 ```typescript
 // src/shared/types/VSCodeTypes.ts
-import { Session, FileState, GitState } from 'codestate-core';
+import { Session, FileState, GitState } from '@codestate/core';
 
 export interface VSCodeSession extends Session {
   vscodeState: VSCodeState;
@@ -167,7 +167,7 @@ import {
   success,
   failure,
   Result
-} from 'codestate-core';
+} from '@codestate/core';
 import { VSCodeSession, ExtensionError, ExtensionErrorCode } from '@/shared/types/VSCodeTypes';
 import { ExtensionError as ExtError } from '@/shared/errors/ExtensionError';
 
@@ -289,7 +289,7 @@ export class CodeStateCoreAdapter {
 import * as vscode from 'vscode';
 import { VSCodeFileState, TerminalSession, WindowState } from '@/shared/types/VSCodeTypes';
 import { ExtensionError, ExtensionErrorCode } from '@/shared/errors/ExtensionError';
-import { Result, success, failure } from 'codestate-core';
+import { Result, success, failure } from '@codestate/core';
 
 export class VSCodeAPIAdapter {
   async captureFileStates(): Promise<Result<VSCodeFileState[], ExtensionError>> {
@@ -418,7 +418,7 @@ export class VSCodeAPIAdapter {
 // src/domain/interfaces/IVSCodeSessionService.ts
 import { VSCodeSession } from '@/shared/types/VSCodeTypes';
 import { ExtensionError } from '@/shared/errors/ExtensionError';
-import { Result } from 'codestate-core';
+import { Result } from '@codestate/core';
 
 export interface SessionFilter {
   tags?: string[];
@@ -451,7 +451,7 @@ export type ImportFormat = 'json' | 'yaml';
 import { IVSCodeSessionService, SessionFilter, ExportFormat, ImportFormat } from '@/domain/interfaces/IVSCodeSessionService';
 import { VSCodeSession } from '@/shared/types/VSCodeTypes';
 import { ExtensionError, ExtensionErrorCode } from '@/shared/errors/ExtensionError';
-import { Result, success, failure } from 'codestate-core';
+import { Result, success, failure } from '@codestate/core';
 import { CodeStateCoreAdapter } from '@/infrastructure/adapters/CodeStateCoreAdapter';
 import { VSCodeAPIAdapter } from '@/infrastructure/adapters/VSCodeAPIAdapter';
 
@@ -565,7 +565,7 @@ export class VSCodeSessionService implements IVSCodeSessionService {
 // src/application/usecases/SaveSessionUseCase.ts
 import { VSCodeSession } from '@/shared/types/VSCodeTypes';
 import { ExtensionError } from '@/shared/errors/ExtensionError';
-import { Result, success, failure } from 'codestate-core';
+import { Result, success, failure } from '@codestate/core';
 import { IVSCodeSessionService } from '@/domain/interfaces/IVSCodeSessionService';
 import { VSCodeAPIAdapter } from '@/infrastructure/adapters/VSCodeAPIAdapter';
 
@@ -674,7 +674,7 @@ export class SaveSessionUseCase {
 // src/application/controllers/SessionController.ts
 import { VSCodeSession } from '@/shared/types/VSCodeTypes';
 import { ExtensionError } from '@/shared/errors/ExtensionError';
-import { Result } from 'codestate-core';
+import { Result } from '@codestate/core';
 import { SaveSessionUseCase, SaveSessionInput } from '@/application/usecases/SaveSessionUseCase';
 import { ResumeSessionUseCase, ResumeSessionInput } from '@/application/usecases/ResumeSessionUseCase';
 import { ListSessionsUseCase } from '@/application/usecases/ListSessionsUseCase';
@@ -966,7 +966,7 @@ import { IVSCodeSessionService } from '@/domain/interfaces/IVSCodeSessionService
 import { VSCodeAPIAdapter } from '@/infrastructure/adapters/VSCodeAPIAdapter';
 import { VSCodeSession } from '@/shared/types/VSCodeTypes';
 import { ExtensionError, ExtensionErrorCode } from '@/shared/errors/ExtensionError';
-import { Result, success, failure } from 'codestate-core';
+import { Result, success, failure } from '@codestate/core';
 
 describe('SaveSessionUseCase', () => {
   let useCase: SaveSessionUseCase;

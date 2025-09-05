@@ -8,7 +8,7 @@ When opening the CodeState sessions accordion in the VS Code sidebar, users were
 
 The issues were occurring in multiple areas:
 
-1. **Tree Data Provider Errors**: The `SessionsTreeDataProvider.getChildren()` method was failing when trying to load sessions and scripts from the codestate-core library. The error handling was catching exceptions but not providing enough debugging information.
+1. **Tree Data Provider Errors**: The `SessionsTreeDataProvider.getChildren()` method was failing when trying to load sessions and scripts from the @codestate/core library. The error handling was catching exceptions but not providing enough debugging information.
 
 2. **Duplicate Command Registration**: The `codestate.refreshSessions` command was being registered twice - once in the constructor and once in the `registerPopoverCommands` method, causing a "command already exists" error.
 
@@ -24,7 +24,7 @@ The issues were occurring in multiple areas:
 - Enhanced error messages with stack traces for better debugging
 
 #### Enhanced Data Loading Methods
-- Added availability checks for `ListSessions` and `GetScripts` classes from codestate-core
+- Added availability checks for `ListSessions` and `GetScripts` classes from @codestate/core
 - Improved error logging in `getAllSessions()` and `getAllScripts()` methods
 - Added detailed result logging to track success/failure of core library calls
 
@@ -42,7 +42,7 @@ The issues were occurring in multiple areas:
 ### 3. Debug Command
 
 #### New DebugSessionsCommand
-- Created a comprehensive debug command that tests all codestate-core integrations
+- Created a comprehensive debug command that tests all @codestate/core integrations
 - Tests `ListSessions` and `GetScripts` functionality directly
 - Provides detailed output to help identify issues
 - Accessible via command palette: `CodeState: Debug Sessions`
@@ -50,7 +50,7 @@ The issues were occurring in multiple areas:
 ### 4. Improved Error Handling
 
 #### Graceful Degradation
-- Better handling of missing or undefined codestate-core classes
+- Better handling of missing or undefined @codestate/core classes
 - Fallback mechanisms when core library calls fail
 - More informative error messages for users
 
@@ -76,7 +76,7 @@ console.log("Getting all sessions...");
 // After
 console.log("Getting all sessions...");
 if (typeof ListSessions === 'undefined') {
-  console.error("ListSessions is not available from codestate-core");
+  console.error("ListSessions is not available from @codestate/core");
   return [];
 }
 console.log("ListSessions instance created");
@@ -140,7 +140,7 @@ If the tree view shows "Error loading data":
 ## Common Issues and Solutions
 
 ### Issue: "ListSessions is not available"
-**Solution**: Check that codestate-core is properly installed and imported
+**Solution**: Check that @codestate/core is properly installed and imported
 
 ### Issue: "Sessions result not ok"
 **Solution**: Check the specific error message in the console for details about why the core library call failed
@@ -167,7 +167,7 @@ If the tree view shows "Error loading data":
 2. **Better Error Messages**: More user-friendly error descriptions
 3. **Loading States**: Visual indicators during data loading
 4. **Caching**: Cache results to improve performance
-5. **Offline Support**: Handle cases when codestate-core is not available
+5. **Offline Support**: Handle cases when @codestate/core is not available
 
 ### Monitoring and Analytics
 - Track error rates and types

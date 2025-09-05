@@ -4,6 +4,7 @@ import { SessionPopoverProvider } from './SessionPopoverProvider';
 import { ScriptPopoverProvider } from './ScriptPopoverProvider';
 import { SessionCommand } from '../commands/SessionCommand';
 import { ListSessionsCommand } from '../commands/ListSessionsCommand';
+import { Script, Session } from '@codestate/core';
 
 export class SessionsTreeViewProvider {
   private treeDataProvider: SessionsTreeDataProvider;
@@ -30,12 +31,88 @@ export class SessionsTreeViewProvider {
     this.registerPopoverCommands(context);
     
     // Register context menu refresh command
-    const contextMenuDisposable = vscode.commands.registerCommand('codestate.sessions.refresh', () => {
+    const contextMenuDisposable = vscode.commands.registerCommand('codestate.sessions.refresh', async () => {
       console.log('Context menu refresh triggered');
-      this.treeDataProvider.refresh();
+      await this.treeDataProvider.refreshCacheAndView();
     });
     
     context.subscriptions.push(contextMenuDisposable);
+  }
+
+  // Method to highlight and expand to show a newly created item
+  async highlightNewItem(itemId: string, itemType: 'script' | 'session'): Promise<void> {
+    try {
+      // First refresh the tree data
+      await this.treeDataProvider.refreshCacheAndView();
+      
+      // Highlight the item
+      this.treeDataProvider.highlightNewItem(itemId, itemType);
+      
+      // Expand the tree view to show the item
+      await this.expandToItem(itemId, itemType);
+      
+      // Ensure the view is visible
+      await vscode.commands.executeCommand('codestate.sessionsView.focus');
+      
+    } catch (error) {
+      console.error('Error highlighting new item:', error);
+    }
+  }
+
+  // Method to expand the tree view to show a specific item
+  private async expandToItem(itemId: string, itemType: 'script' | 'session'): Promise<void> {
+    try {
+      // Get all tree items
+      const rootItems = await this.treeDataProvider.getChildren();
+      
+      for (const projectItem of rootItems) {
+        // Check if it's a project item by looking for resourceUri and contextValue
+        if (projectItem.resourceUri && projectItem.contextValue === 'project') {
+          // First expand the project item
+          await this.treeView.reveal(projectItem, { expand: true });
+          
+          const projectChildren = await this.treeDataProvider.getChildren(projectItem);
+          
+          for (const groupItem of projectChildren) {
+            if (groupItem.contextValue === 'scripts' && itemType === 'script') {
+              // Expand scripts group
+              await this.treeView.reveal(groupItem, { expand: true });
+              
+              // Get and expand individual scripts
+              const scripts = await this.treeDataProvider.getChildren(groupItem);
+              for (const scriptItem of scripts) {
+                // Check if this is a script item by looking for the script property
+                if (scriptItem.contextValue === 'script' && 
+                    'script' in scriptItem && 
+                    (scriptItem as any).script?.id === itemId) {
+                  // Expand to show this script
+                  await this.treeView.reveal(scriptItem, { expand: false, select: true, focus: true });
+                  return;
+                }
+              }
+            } else if (groupItem.contextValue === 'sessions' && itemType === 'session') {
+              // Expand sessions group
+              await this.treeView.reveal(groupItem, { expand: true });
+              
+              // Get and expand individual sessions
+              const sessions = await this.treeDataProvider.getChildren(groupItem);
+              for (const sessionItem of sessions) {
+                // Check if this is a session item by looking for the session property
+                if (sessionItem.contextValue === 'session' && 
+                    'session' in sessionItem && 
+                    (sessionItem as any).session?.id === itemId) {
+                  // Expand to show this session
+                  await this.treeView.reveal(sessionItem, { expand: false, select: true, focus: true });
+                  return;
+                }
+              }
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error expanding to item:', error);
+    }
   }
 
   private registerPopoverCommands(context: vscode.ExtensionContext): void {
@@ -82,9 +159,9 @@ export class SessionsTreeViewProvider {
 
     // Refresh command
     context.subscriptions.push(
-      vscode.commands.registerCommand('codestate.refreshSessions', () => {
+      vscode.commands.registerCommand('codestate.refreshSessions', async () => {
         console.log('Manual refresh triggered');
-        this.treeDataProvider.refresh();
+        await this.treeDataProvider.refreshCacheAndView();
       })
     );
   }

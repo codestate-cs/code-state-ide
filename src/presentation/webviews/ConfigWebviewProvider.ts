@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { ConfigService } from '../../infrastructure/services/ConfigService';
 import { ErrorHandler } from '../../shared/errors/ErrorHandler';
 import { ExtensionError, ErrorContext } from '../../shared/errors/ExtensionError';
-import type { Config } from 'codestate-core';
+import type { Config } from '@codestate/core';
 
 export class ConfigWebviewProvider {
   private static readonly viewType = 'codestate.configEditor';

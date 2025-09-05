@@ -1,15 +1,22 @@
 import * as vscode from 'vscode';
-import { ListSessions, Session } from 'codestate-core';
+import { Session } from '@codestate/core';
 import { ErrorHandler } from '../../shared/errors/ErrorHandler';
 import { ExtensionError, ErrorContext } from '../../shared/errors/ExtensionError';
+import { DataCacheService } from '../../infrastructure/services/DataCacheService';
+import { useCacheStore } from '../../shared/stores/cacheStore';
 
 export class ListSessionsCommand {
   private static errorHandler: ErrorHandler;
+  private static dataCacheService: DataCacheService;
 
   static async execute(): Promise<void> {
     try {
       if (!this.errorHandler) {
         this.errorHandler = ErrorHandler.getInstance();
+      }
+      
+      if (!this.dataCacheService) {
+        this.dataCacheService = DataCacheService.getInstance();
       }
 
       // Get current workspace
@@ -26,19 +33,14 @@ export class ListSessionsCommand {
         title: 'Loading sessions...',
         cancellable: false
       }, async (progress) => {
-        progress.report({ message: 'Fetching sessions...', increment: 50 });
+        progress.report({ message: 'Fetching sessions from cache...', increment: 50 });
 
-        // Get sessions using codestate-core
-        const listSessions = new ListSessions();
-        const result = await listSessions.execute({
-          search: projectRoot
-        });
-
-        if (!result.ok) {
-          throw new Error('Failed to load sessions');
-        }
-
-        const sessions = result.value.filter(session => 
+        // Get sessions from cache
+        await this.dataCacheService.getSessions();
+        
+        // Get sessions from store
+        const store = useCacheStore.getState();
+        const sessions = store.sessions.filter(session => 
           session.projectRoot === projectRoot
         );
 

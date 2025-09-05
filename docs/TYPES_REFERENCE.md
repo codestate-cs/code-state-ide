@@ -1,6 +1,6 @@
 # Types Reference
 
-This document provides a comprehensive reference of all types exported by the `codestate-core` package.
+This document provides a comprehensive reference of all types exported by the `@codestate/core` package.
 
 ## Table of Contents
 
@@ -652,7 +652,7 @@ The following aliases are exported for convenience:
 
 ### Basic Configuration
 ```typescript
-import { Config, GetConfig, UpdateConfig } from 'codestate-core';
+import { Config, GetConfig, UpdateConfig } from '@codestate/core';
 
 const getConfig = new GetConfig();
 const result = await getConfig.execute();
@@ -664,7 +664,7 @@ if (isSuccess(result)) {
 
 ### Working with Scripts
 ```typescript
-import { Script, CreateScript, GetScripts } from 'codestate-core';
+import { Script, CreateScript, GetScripts } from '@codestate/core';
 
 const script: Script = {
   name: "build",
@@ -678,7 +678,7 @@ await createScript.execute(script);
 
 ### Git Operations
 ```typescript
-import { GitService, GetGitStatus } from 'codestate-core';
+import { GitService, GetGitStatus } from '@codestate/core';
 
 const gitService = new GitService();
 const getStatus = new GetGitStatus(gitService);
@@ -687,7 +687,7 @@ const result = await getStatus.execute();
 
 ### Error Handling
 ```typescript
-import { AppError, ErrorCode, getUserMessageForErrorCode } from 'codestate-core';
+import { AppError, ErrorCode, getUserMessageForErrorCode } from '@codestate/core';
 
 try {
   // Some operation

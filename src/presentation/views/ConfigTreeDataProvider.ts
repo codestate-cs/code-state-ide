@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { ErrorHandler } from '../../shared/errors/ErrorHandler';
 import { ExtensionError, ErrorContext } from '../../shared/errors/ExtensionError';
 import { ConfigService } from '../../infrastructure/services/ConfigService';
-import type { Config } from 'codestate-core';
+import type { Config } from '@codestate/core';
 
 export interface ConfigTreeItem extends vscode.TreeItem {
   contextValue: string;

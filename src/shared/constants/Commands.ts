@@ -7,6 +7,10 @@ export const Commands = {
   DELETE_SESSION: 'codestate.deleteSession',
   EXPORT_SESSION: 'codestate.exportSession',
   
+  // Terminal collection commands
+  SAVE_TERMINAL_COLLECTION: 'codestate.saveTerminalCollection',
+  UPDATE_TERMINAL_COLLECTION: 'codestate.updateTerminalCollection',
+  
   // Configuration commands
   REFRESH_CONFIG: 'codestate.refreshConfig',
   EDIT_CONFIG: 'codestate.editConfig',
