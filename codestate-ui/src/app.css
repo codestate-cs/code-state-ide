@@ -1,0 +1,36 @@
+/* App Layout Styles */
+
+.app {
+  min-height: 100vh;
+  height: 100vh; /* Fixed height */
+  background: var(--background);
+  color: var(--foreground);
+  transition: background-color var(--transition-base), color var(--transition-base);
+  overflow: hidden; /* Prevent app scroll */
+}
+
+/* Header styles moved to Header.css */
+
+.app-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 80px); /* Fixed height minus header */
+  overflow-y: auto; /* Allow vertical scrolling */
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+.demo-buttons {
+  display: flex;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+  margin-top: var(--space-md);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .app-content {
+    height: calc(100vh - 120px); /* Fixed height minus mobile header */
+  }
+}

@@ -1,0 +1,142 @@
+/* Dialog Styles */
+
+.dialog-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease-out;
+  padding: var(--space-md);
+}
+
+.dialog {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  max-height: 90vh;
+  overflow: hidden;
+  animation: slideIn 0.2s ease-out;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Dialog sizes */
+.dialog-sm {
+  width: 100%;
+  max-width: 400px;
+}
+
+.dialog-md {
+  width: 100%;
+  max-width: 600px;
+}
+
+.dialog-lg {
+  width: 100%;
+  max-width: 800px;
+}
+
+.dialog-xl {
+  width: 100%;
+  max-width: 1000px;
+}
+
+.dialog-header {
+  padding: var(--space-lg);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+
+.dialog-title {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.dialog-close-button {
+  background: none;
+  border: none;
+  padding: var(--space-xs);
+  border-radius: var(--radius-sm);
+  color: var(--muted-foreground);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dialog-close-button:hover {
+  background: var(--accent);
+  color: var(--foreground);
+}
+
+.dialog-close-button:focus {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.dialog-content {
+  padding: var(--space-lg);
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .dialog-backdrop {
+    padding: var(--space-sm);
+  }
+  
+  .dialog {
+    max-height: 95vh;
+  }
+  
+  .dialog-header,
+  .dialog-content {
+    padding: var(--space-md);
+  }
+  
+  .dialog-sm,
+  .dialog-md,
+  .dialog-lg,
+  .dialog-xl {
+    max-width: none;
+    width: 100%;
+  }
+}

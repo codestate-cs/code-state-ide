@@ -1,0 +1,183 @@
+/* Tabs Component Styles */
+
+.tabs {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+/* Tab List */
+.tabs-list {
+  display: flex;
+  gap: var(--space-xs);
+  padding: var(--space-xs);
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-border);
+  overflow-x: auto;
+}
+
+/* Tab Trigger */
+.tab-trigger {
+  background: transparent;
+  border: none;
+  padding: var(--space-sm) var(--space-md);
+  border-radius: calc(var(--radius) - 2px);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  color: var(--muted-foreground);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  white-space: nowrap;
+  position: relative;
+  overflow: hidden;
+}
+
+.tab-trigger:hover:not(.disabled) {
+  background: var(--accent);
+  color: var(--foreground);
+}
+
+.tab-trigger:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.tab-trigger.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Pills Variant */
+.tabs-pills .tab-trigger.active {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.tabs-pills .tab-trigger.active::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.1) 100%);
+  border-radius: inherit;
+}
+
+/* Underline Variant */
+.tabs-underline .tab-trigger.active {
+  background: transparent;
+  color: var(--foreground);
+  position: relative;
+}
+
+.tabs-underline .tab-trigger.active::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  height: 2px;
+  background: var(--primary);
+  border-radius: 1px;
+  animation: slideIn var(--transition-base) ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    width: 0;
+  }
+  to {
+    width: 100%;
+  }
+}
+
+/* Tab Content */
+.tabs-content {
+  position: relative;
+  min-height: 100px;
+  height: auto; /* Allow height to grow with content */
+  flex: 1; /* Take remaining space */
+  display: flex; /* Enable flex layout */
+  flex-direction: column; /* Stack content vertically */
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius);
+}
+
+.tab-content {
+  position: relative;
+  display: none; /* Hide inactive tabs completely */
+  padding: var(--space-md);
+  background: transparent; /* Remove individual background */
+  overflow: visible; /* Remove internal scroll */
+  width: 100%;
+  min-height: 100%; /* Ensure minimum height */
+}
+
+.tab-content.active {
+  position: relative; /* Use relative positioning */
+  display: block; /* Show active tab */
+  pointer-events: auto;
+  animation: fadeInUp var(--transition-base) ease-out;
+}
+
+.tab-content p {
+  margin: 0;
+  color: var(--muted-foreground);
+  line-height: 1.6;
+}
+
+.tab-content p:not(:last-child) {
+  margin-bottom: var(--space-sm);
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .tabs-list {
+    gap: var(--space-xs);
+    padding: var(--space-xs);
+  }
+  
+  .tab-trigger {
+    padding: var(--space-sm);
+    font-size: var(--font-size-xs);
+  }
+  
+  .tab-content {
+    padding: var(--space-sm);
+  }
+}
+
+/* Scrollbar for tab list */
+.tabs-list::-webkit-scrollbar {
+  height: 4px;
+}
+
+.tabs-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.tabs-list::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 2px;
+}
+
+.tabs-list::-webkit-scrollbar-thumb:hover {
+  background: var(--muted-foreground);
+}

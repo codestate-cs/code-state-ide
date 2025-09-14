@@ -1,0 +1,96 @@
+/* Import Design System */
+@import './styles/design-system.css';
+
+/* Global Reset and Base Styles */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  font-family: 'Segoe UI', 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: hsl(240, 10%, 3.9%);
+  color: hsl(0, 0%, 98%);
+  transition: background-color 250ms ease-out, color 250ms ease-out;
+  overflow: hidden; /* Prevent body scroll */
+}
+
+#root {
+  min-height: 100vh;
+  height: 100vh; /* Fixed height to prevent overflow */
+  overflow: hidden; /* Prevent root scroll */
+}
+
+/* Set default theme */
+html[data-theme="dark"] {
+  /* Dark theme is already set as default in design-system.css */
+}
+
+html[data-theme="light"] {
+  --background: hsl(0, 0%, 100%);
+  --foreground: hsl(240, 10%, 3.9%);
+  --muted: hsl(240, 4.8%, 95.9%);
+  --muted-foreground: hsl(240, 3.8%, 46.1%);
+  --popover: hsl(0, 0%, 100%);
+  --popover-foreground: hsl(240, 10%, 3.9%);
+  --card: hsl(0, 0%, 100%);
+  --card-foreground: hsl(240, 10%, 3.9%);
+  --border: hsl(240, 5.9%, 90%);
+  --input: hsl(240, 5.9%, 90%);
+  --primary: hsl(207, 90%, 54%);
+  --primary-foreground: hsl(211, 100%, 99%);
+  --secondary: hsl(240, 4.8%, 95.9%);
+  --secondary-foreground: hsl(240, 5.9%, 10%);
+  --accent: hsl(240, 4.8%, 95.9%);
+  --accent-foreground: hsl(240, 5.9%, 10%);
+  --destructive: hsl(0, 84.2%, 60.2%);
+  --destructive-foreground: hsl(0, 0%, 98%);
+  --ring: hsl(240, 5.9%, 10%);
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-border: rgba(0, 0, 0, 0.1);
+}
+
+html[data-theme="match-ide"] {
+  /* These will be dynamically set by JavaScript based on VS Code theme */
+  --background: var(--vscode-editor-background, hsl(240, 10%, 3.9%));
+  --foreground: var(--vscode-editor-foreground, hsl(0, 0%, 98%));
+  --muted: var(--vscode-input-background, hsl(240, 3.7%, 15.9%));
+  --muted-foreground: var(--vscode-descriptionForeground, hsl(240, 5%, 64.9%));
+  --border: var(--vscode-widget-border, hsl(240, 3.7%, 15.9%));
+  --primary: var(--vscode-button-background, hsl(207, 90%, 54%));
+  --primary-foreground: var(--vscode-button-foreground, hsl(211, 100%, 99%));
+  --accent: var(--vscode-focusBorder, hsl(207, 90%, 54%));
+  --glass-bg: rgba(255, 255, 255, 0.05);
+  --glass-border: rgba(255, 255, 255, 0.1);
+}
+
+/* Spacing Variables */
+:root {
+  --spacing-xs: 0.25rem;    /* 4px */
+  --spacing-sm: 0.5rem;     /* 8px */
+  --spacing-md: 0.75rem;    /* 12px */
+  --spacing-lg: 1rem;       /* 16px */
+  --spacing-xl: 1.5rem;     /* 24px */
+  --spacing-2xl: 2rem;      /* 32px */
+  --spacing-3xl: 3rem;      /* 48px */
+  --spacing-4xl: 4rem;      /* 64px */
+  
+  /* Legacy spacing variables for backward compatibility */
+  --space-xs: var(--spacing-xs);
+  --space-sm: var(--spacing-sm);
+  --space-md: var(--spacing-md);
+  --space-lg: var(--spacing-lg);
+  --space-xl: var(--spacing-xl);
+}

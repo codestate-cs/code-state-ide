@@ -1,0 +1,115 @@
+/* Script Card - Using same styles as Session Card */
+.script-card {
+  transition: all var(--transition-base);
+}
+
+.script-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+}
+
+.script-card.newly-created {
+  border: 3px solid #22c55e; /* Green border */
+  box-shadow: 0 0 25px rgba(34, 197, 94, 0.3);
+  animation: highlight 3s ease-out;
+  position: relative;
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.05), rgba(34, 197, 94, 0.02));
+}
+
+.script-card.newly-created::before {
+  content: '';
+  position: absolute;
+  top: -3px;
+  left: -3px;
+  right: -3px;
+  bottom: -3px;
+  background: linear-gradient(45deg, #22c55e, #16a34a, #22c55e);
+  border-radius: var(--radius);
+  z-index: -1;
+  animation: shimmer 3s infinite;
+}
+
+@keyframes highlight {
+  0% { 
+    transform: scale(1.02);
+    box-shadow: 0 0 30px rgba(34, 197, 94, 0.4);
+  }
+  50% { 
+    transform: scale(1.01);
+    box-shadow: 0 0 25px rgba(34, 197, 94, 0.3);
+  }
+  100% { 
+    transform: scale(1);
+    box-shadow: 0 0 20px rgba(34, 197, 94, 0.2);
+  }
+}
+
+@keyframes shimmer {
+  0% { 
+    background-position: -200% 0;
+  }
+  100% { 
+    background-position: 200% 0;
+  }
+}
+
+.script-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-sm);
+}
+
+.script-title h3 {
+  margin: 0 0 var(--space-xs) 0;
+  color: var(--foreground);
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+}
+
+.script-actions {
+  display: flex;
+  gap: var(--space-xs);
+  flex-shrink: 0;
+}
+
+/* Script Details - Using same styles as Session Details */
+.script-details {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.script-detail {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+  font-size: var(--font-size-sm);
+}
+
+.detail-label {
+  font-weight: 500;
+  color: var(--foreground);
+  min-width: 80px;
+  flex-shrink: 0;
+}
+
+.detail-value {
+  color: var(--muted-foreground);
+  flex: 1;
+  word-break: break-word;
+}
+
+
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .script-card-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .script-actions {
+    justify-content: flex-end;
+  }
+}
