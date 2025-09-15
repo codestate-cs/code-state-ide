@@ -1,5 +1,5 @@
 // Base interface for all data providers
-// Ensures VSCodeProvider and MockProvider stay in sync
+// Data provider interface for VS Code integration
 
 export interface DataProvider {
   // Data initialization (no returns expected)

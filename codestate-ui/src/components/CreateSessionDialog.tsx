@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'preact/hooks';
 import { Dialog } from './Dialog';
-import { useCodeStateStore } from '../store/codestateStore';
+import { useSessionStore, useScriptStore, useTerminalCollectionStore } from '../store/combinedStore';
 import type { DataProvider } from '../providers/DataProvider';
 import type { SessionWithFullData } from '../types/session';
 import './CreateSessionDialog.css';
@@ -48,9 +48,9 @@ export function CreateSessionDialog({
   const [createError, setCreateError] = useState<string | null>(null);
 
   // Get Zustand store data and actions
-  const scripts = useCodeStateStore((state) => state.scripts);
-  const terminalCollections = useCodeStateStore((state) => state.terminalCollections);
-  const setTempSessionData = useCodeStateStore((state) => state.setTempSessionData);
+  const scripts = useScriptStore((state) => state.scripts);
+  const terminalCollections = useTerminalCollectionStore((state) => state.terminalCollections);
+  const setTempSessionData = useSessionStore((state) => state.setTempSessionData);
 
   // Pre-populate form when session data is available
   useEffect(() => {
@@ -574,21 +574,23 @@ export function CreateSessionDialog({
           <p>Collecting workspace data...</p>
         </div>
       ) : (
-        <div className="create-session-form">
-          {renderStepIndicator()}
-          
-          <form onSubmit={handleSubmit} onKeyDown={(e) => {
-            if (e.key === 'Enter' && currentStep !== 'review') {
-              e.preventDefault();
-            }
-          }} className="step-form">
-            <div className="step-content-scrollable">
-              {currentStep === 'basic' && renderBasicStep()}
-              {currentStep === 'scripts' && renderScriptsStep()}
-              {currentStep === 'terminal-collections' && renderTerminalCollectionsStep()}
-              {currentStep === 'review' && renderReviewStep()}
-            </div>
-          </form>
+        <div className="create-session-container">
+          <div className="create-session-form">
+            {renderStepIndicator()}
+            
+            <form onSubmit={handleSubmit} onKeyDown={(e) => {
+              if (e.key === 'Enter' && currentStep !== 'review') {
+                e.preventDefault();
+              }
+            }} className="step-form">
+              <div className="step-content-scrollable">
+                {currentStep === 'basic' && renderBasicStep()}
+                {currentStep === 'scripts' && renderScriptsStep()}
+                {currentStep === 'terminal-collections' && renderTerminalCollectionsStep()}
+                {currentStep === 'review' && renderReviewStep()}
+              </div>
+            </form>
+          </div>
 
           <div className="form-actions">
             <button

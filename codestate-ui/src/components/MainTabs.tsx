@@ -1,8 +1,11 @@
-import { useState, useEffect } from 'preact/hooks';
+import { memo, lazy, Suspense } from 'preact/compat';
+import { useState, useEffect, useMemo, useCallback } from 'preact/hooks';
 import { Tabs } from './Tabs';
-import { SessionList } from './SessionList';
-import { ScriptList } from './ScriptList';
-import { TerminalCollectionList } from './TerminalCollectionList';
+
+// Lazy load list components
+const SessionList = lazy(() => import('./SessionList').then(module => ({ default: module.SessionList })));
+const ScriptList = lazy(() => import('./ScriptList').then(module => ({ default: module.ScriptList })));
+const TerminalCollectionList = lazy(() => import('./TerminalCollectionList').then(module => ({ default: module.TerminalCollectionList })));
 import type { SessionWithFullData, Script, TerminalCollectionWithScripts } from '../types/session';
 import type { UIEvent } from '../store/codestateStore';
 import './MainTabs.css';
@@ -20,7 +23,7 @@ interface MainTabsProps {
   onEvent: (event: UIEvent) => void;
 }
 
-export function MainTabs({
+export const MainTabs = memo(function MainTabs({
   sessions,
   scripts,
   terminalCollections,
@@ -33,6 +36,11 @@ export function MainTabs({
   onEvent
 }: MainTabsProps) {
   const [activeTab, setActiveTab] = useState('sessions');
+
+  // Memoize tab change handler
+  const handleTabChange = useCallback((tabId: string) => {
+    setActiveTab(tabId);
+  }, []);
 
   // Load data when tab changes
   useEffect(() => {
@@ -48,41 +56,56 @@ export function MainTabs({
         break;
     }
   }, [activeTab, initializeSessions, initializeScripts, initializeTerminalCollections]);
-  const tabItems = [
-    {
-      id: 'sessions',
-      label: `Sessions (${sessions.length})`,
-      content: (
+
+  // Memoize tab content with lazy loading
+  const tabContent = useMemo(() => ({
+    sessions: (
+      <Suspense fallback={<div className="tab-loading">Loading sessions...</div>}>
         <SessionList
           sessions={sessions}
           isLoading={sessionsLoading}
           onEvent={onEvent}
         />
-      )
-    },
-    {
-      id: 'scripts',
-      label: `Scripts (${scripts.length})`,
-      content: (
+      </Suspense>
+    ),
+    scripts: (
+      <Suspense fallback={<div className="tab-loading">Loading scripts...</div>}>
         <ScriptList
           scripts={scripts}
           isLoading={scriptsLoading}
           onEvent={onEvent}
         />
-      )
-    },
-    {
-      id: 'terminal-collections',
-      label: `Terminal Collections (${terminalCollections.length})`,
-      content: (
+      </Suspense>
+    ),
+    'terminal-collections': (
+      <Suspense fallback={<div className="tab-loading">Loading terminal collections...</div>}>
         <TerminalCollectionList
           terminalCollections={terminalCollections}
           isLoading={terminalCollectionsLoading}
           onEvent={onEvent}
         />
-      )
+      </Suspense>
+    )
+  }), [sessions, scripts, terminalCollections, sessionsLoading, scriptsLoading, terminalCollectionsLoading, onEvent]);
+
+  // Memoize tab items
+  const tabItems = useMemo(() => [
+    {
+      id: 'sessions',
+      label: `Sessions (${sessions.length})`,
+      content: tabContent.sessions
+    },
+    {
+      id: 'scripts',
+      label: `Scripts (${scripts.length})`,
+      content: tabContent.scripts
+    },
+    {
+      id: 'terminal-collections',
+      label: `Terminal Collections (${terminalCollections.length})`,
+      content: tabContent['terminal-collections']
     }
-  ];
+  ], [sessions.length, scripts.length, terminalCollections.length, tabContent]);
 
   return (
     <div className="main-tabs">
@@ -91,8 +114,8 @@ export function MainTabs({
         variant="pills"
         className="main-tabs-container"
         activeTab={activeTab}
-        onTabChange={setActiveTab}
+        onTabChange={handleTabChange}
       />
     </div>
   );
-}
+});

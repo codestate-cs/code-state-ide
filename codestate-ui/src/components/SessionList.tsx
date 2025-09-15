@@ -1,31 +1,28 @@
-import { useState, useEffect } from 'preact/hooks';
+import { memo } from 'preact/compat';
+import { useState, useEffect, useMemo, useCallback } from 'preact/hooks';
 import { Card, CardContent } from './Card';
 import { SessionCard } from './SessionCard';
 import { Accordion } from './Accordion';
-import { useCodeStateStore } from '../store/codestateStore';
+import { useSessionStore, useConfigStore } from '../store/combinedStore';
 import type { SessionListProps } from '../types/session';
 import type { SessionWithFullData } from '../types/session';
 import './SessionList.css';
 
-export function SessionList({
+export const SessionList = memo(function SessionList({
   sessions,
   isLoading,
   onEvent
 }: SessionListProps) {
   const [searchTerm, setSearchTerm] = useState('');
+  
   const { 
-    currentProjectRoot, 
     newlyCreatedSessionId, 
     showSessionCreatedFeedback,
     hideSessionCreatedFeedback 
-  } = useCodeStateStore();
+  } = useSessionStore();
   
-  console.log('SessionList: Received sessions:', sessions);
-  console.log('SessionList: isLoading:', isLoading);
-  console.log('SessionList: sessions.length:', sessions.length);
-  console.log('SessionList: sessions type:', typeof sessions);
-  console.log('SessionList: sessions is array:', Array.isArray(sessions));
-  console.log('SessionList: currentProjectRoot:', currentProjectRoot);
+  const { currentProjectRoot } = useConfigStore();
+  
 
   // Hide feedback after 3 seconds
   useEffect(() => {
@@ -38,8 +35,8 @@ export function SessionList({
     }
   }, [showSessionCreatedFeedback, newlyCreatedSessionId, hideSessionCreatedFeedback]);
 
-  // Event delegation handler
-  const handleEventDelegation = (e: Event) => {
+  // Memoize event delegation handler
+  const handleEventDelegation = useCallback((e: Event) => {
     const target = e.target as HTMLElement;
     const action = target.dataset.action;
     const sessionId = target.dataset.sessionId;
@@ -63,18 +60,18 @@ export function SessionList({
         if (sessionId) onEvent({ type: 'EXPORT_SESSION', payload: { id: sessionId } });
         break;
     }
-  };
+  }, [onEvent]);
 
-  // Filter sessions based on search term
-  const filteredSessions = sessions.filter(session => 
-    session.name.toLowerCase().includes(searchTerm.toLowerCase())
+  // Memoize filtered sessions
+  const filteredSessions = useMemo(() => 
+    sessions.filter(session => 
+      session.name.toLowerCase().includes(searchTerm.toLowerCase())
+    ), [sessions, searchTerm]
   );
   
-  console.log('SessionList: filteredSessions:', filteredSessions);
-  console.log('SessionList: filteredSessions.length:', filteredSessions.length);
 
-  // Group sessions by rootPath
-  const groupSessionsByPath = (sessions: SessionWithFullData[]) => {
+  // Memoize group sessions by path function
+  const groupSessionsByPath = useCallback((sessions: SessionWithFullData[]) => {
     const groups: { [key: string]: SessionWithFullData[] } = {};
     
     sessions.forEach(session => {
@@ -86,58 +83,72 @@ export function SessionList({
     });
     
     return groups;
-  };
+  }, []);
 
-  const sessionGroups = groupSessionsByPath(filteredSessions);
-  const groupEntries = Object.entries(sessionGroups);
+  // Memoize session groups
+  const sessionGroups = useMemo(() => 
+    groupSessionsByPath(filteredSessions), 
+    [filteredSessions, groupSessionsByPath]
+  );
   
-  // Sort accordion items to ensure current project is always first
-  const sortedGroupEntries = groupEntries.sort(([a], [b]) => {
-    const aIsCurrent = a === currentProjectRoot;
-    const bIsCurrent = b === currentProjectRoot;
-    
-    if (aIsCurrent && !bIsCurrent) return -1;
-    if (!aIsCurrent && bIsCurrent) return 1;
-    return 0; // Keep original order for non-current projects
-  });
+  const groupEntries = useMemo(() => 
+    Object.entries(sessionGroups), 
+    [sessionGroups]
+  );
+  
+  // Memoize sorted group entries
+  const sortedGroupEntries = useMemo(() => 
+    groupEntries.sort(([a], [b]) => {
+      const aIsCurrent = a === currentProjectRoot;
+      const bIsCurrent = b === currentProjectRoot;
+      
+      if (aIsCurrent && !bIsCurrent) return -1;
+      if (!aIsCurrent && bIsCurrent) return 1;
+      return 0; // Keep original order for non-current projects
+    }), 
+    [groupEntries, currentProjectRoot]
+  );
 
-  // Create accordion items from grouped sessions
-  const accordionItems = sortedGroupEntries.map(([rootPath, groupSessions]) => {
-    const projectName = rootPath.split('/').pop() || rootPath;
-    const isCurrentProject = currentProjectRoot === rootPath;
-    
-    // Check if this group contains the newly created session
-    const hasNewlyCreatedSession = newlyCreatedSessionId && 
-      groupSessions.some(session => session.id === newlyCreatedSessionId);
-    
-    return {
-      id: `group-${rootPath}`,
-      defaultOpen: isCurrentProject || !!hasNewlyCreatedSession, // Open if current project or has newly created session
-      title: (
-        <div className="accordion-title-content">
-          <span className="project-name">{projectName}</span>
-          <span className="session-count">({groupSessions.length} session{groupSessions.length !== 1 ? 's' : ''})</span>
-          {hasNewlyCreatedSession && showSessionCreatedFeedback && (
-            <span className="new-session-indicator">✨ New!</span>
-          )}
-          <span className="accordion-title-path">{rootPath}</span>
-        </div>
-      ),
-      content: (
-        <div className="session-group-content">
-          <div className="session-group-grid">
-            {groupSessions.map((session) => (
-              <SessionCard
-                key={session.id}
-                session={session}
-                isNewlyCreated={session.id === newlyCreatedSessionId && showSessionCreatedFeedback}
-              />
-            ))}
+  // Memoize accordion items creation
+  const accordionItems = useMemo(() => 
+    sortedGroupEntries.map(([rootPath, groupSessions]) => {
+      const projectName = rootPath.split('/').pop() || rootPath;
+      const isCurrentProject = currentProjectRoot === rootPath;
+      
+      // Check if this group contains the newly created session
+      const hasNewlyCreatedSession = newlyCreatedSessionId && 
+        groupSessions.some(session => session.id === newlyCreatedSessionId);
+      
+      return {
+        id: `group-${rootPath}`,
+        defaultOpen: isCurrentProject || !!hasNewlyCreatedSession, // Open if current project or has newly created session
+        title: (
+          <div className="accordion-title-content">
+            <span className="project-name">{projectName}</span>
+            <span className="session-count">({groupSessions.length} session{groupSessions.length !== 1 ? 's' : ''})</span>
+            {hasNewlyCreatedSession && showSessionCreatedFeedback && (
+              <span className="new-session-indicator">✨ New!</span>
+            )}
+            <span className="accordion-title-path">{rootPath}</span>
           </div>
-        </div>
-      )
-    };
-  });
+        ),
+        content: (
+          <div className="session-group-content">
+            <div className="session-group-grid">
+              {groupSessions.map((session) => (
+                <SessionCard
+                  key={session.id}
+                  session={session}
+                  isNewlyCreated={session.id === newlyCreatedSessionId && showSessionCreatedFeedback}
+                />
+              ))}
+            </div>
+          </div>
+        )
+      };
+    }), 
+    [sortedGroupEntries, currentProjectRoot, newlyCreatedSessionId, showSessionCreatedFeedback]
+  );
   if (isLoading) {
     return (
       <div className="session-list">
@@ -265,4 +276,4 @@ export function SessionList({
       </div>
     </div>
   );
-}
+});

@@ -1,10 +1,12 @@
+import { memo } from 'preact/compat';
 import './Header.css';
 
 interface HeaderProps {
   onConfigClick: () => void;
 }
 
-export function Header({ onConfigClick }: HeaderProps) {
+export const Header = memo(function Header({ onConfigClick }: HeaderProps) {
+  
   return (
     <header className="app-header">
       <div className="header-content">
@@ -28,4 +30,4 @@ export function Header({ onConfigClick }: HeaderProps) {
       </div>
     </header>
   );
-}
+});

@@ -24,5 +24,9 @@ export default defineConfig({
   },
   css: {
     devSourcemap: false
+  },
+  esbuild: {
+    // Remove console.log statements in production build
+    drop: ['console', 'debugger']
   }
 })

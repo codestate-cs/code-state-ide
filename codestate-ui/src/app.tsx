@@ -1,10 +1,12 @@
-import { useEffect } from 'preact/hooks';
+import { memo } from 'preact/compat';
+import { useEffect, useCallback } from 'preact/hooks';
 import { Header } from './components/Header';
 import { MainTabs } from './components/MainTabs';
 import { PopupManager } from './components/PopupManager';
 import { useDataLoader } from './hooks/useDataLoader';
 import { useUIEvents } from './hooks/useUIEvents';
-import { useCodeStateStore } from './store/codestateStore';
+import { CombinedProvider } from './providers/CombinedProvider';
+import { useConfigContext } from './providers/CombinedProvider';
 import type { DataProvider, Theme } from './providers/DataProvider';
 import './styles/design-system.css';
 import './app.css';
@@ -13,8 +15,7 @@ interface AppProps {
   provider: DataProvider;
 }
 
-export function App({ provider }: AppProps) {
-  
+const AppContent = memo(function AppContent({ provider }: AppProps) {
   // Use Zustand store for data management
   const {
     sessions,
@@ -28,8 +29,8 @@ export function App({ provider }: AppProps) {
     initializeTerminalCollections
   } = useDataLoader(provider);
 
-  // Get config dialog state from store
-  const configDialog = useCodeStateStore((state) => state.configDialog);
+  // Get config dialog state from context
+  const { configDialog, openConfigDialog } = useConfigContext();
 
   
   // Event handling
@@ -59,18 +60,16 @@ export function App({ provider }: AppProps) {
   useEffect(() => {
     if (configDialog.configData) {
       const theme = configDialog.configData.extensions?.theme as Theme || 'dark';
-      console.log('App: Setting theme from config', theme);
       
       // Apply theme to DOM
       document.documentElement.setAttribute('data-theme', theme);
     }
   }, [configDialog.configData]);
 
-  const handleConfigClick = () => {
+  const handleConfigClick = useCallback(() => {
     // Open config dialog (data already loaded in Zustand)
-    const { openConfigDialog } = useCodeStateStore.getState();
     openConfigDialog();
-  };
+  }, [openConfigDialog]);
 
 
   return (
@@ -99,4 +98,12 @@ export function App({ provider }: AppProps) {
       </div>
     </div>
   );
-}
+});
+
+export const App = memo(function App({ provider }: AppProps) {
+  return (
+    <CombinedProvider>
+      <AppContent provider={provider} />
+    </CombinedProvider>
+  );
+});

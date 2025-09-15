@@ -1,10 +1,19 @@
 /* Create Session Dialog Form Styles */
 
+.create-session-container {
+  display: flex;
+  flex-direction: column;
+  min-width: 600px;
+  max-width: 800px;
+  height: 70vh;
+  max-height: 70vh;
+}
+
 .create-session-form {
   display: flex;
   flex-direction: column;
-  height: 100%;
-  max-height: 80vh;
+  flex: 1;
+  min-height: 0;
 }
 
 .step-form {
@@ -20,6 +29,25 @@
   padding: var(--spacing-lg) 0;
   scrollbar-width: thin;
   scrollbar-color: var(--border) transparent;
+}
+
+/* Custom scrollbar for step content */
+.step-content-scrollable::-webkit-scrollbar {
+  width: 6px;
+}
+
+.step-content-scrollable::-webkit-scrollbar-track {
+  background: var(--muted);
+  border-radius: 3px;
+}
+
+.step-content-scrollable::-webkit-scrollbar-thumb {
+  background: var(--muted-foreground);
+  border-radius: 3px;
+}
+
+.step-content-scrollable::-webkit-scrollbar-thumb:hover {
+  background: var(--foreground);
 }
 
 .form-group {

@@ -1,8 +1,9 @@
-import { useEffect } from 'preact/hooks';
+import { memo } from 'preact/compat';
+import { useEffect, useCallback } from 'preact/hooks';
 import { Card, CardContent, CardHeader } from './Card';
 import type { TerminalCollectionWithScripts } from '../types/session';
 import type { UIEvent } from '../store/codestateStore';
-import { useCodeStateStore } from '../store/codestateStore';
+import { useTerminalCollectionStore, useConfigStore, useScriptStore } from '../store/combinedStore';
 import './TerminalCollectionList.css';
 
 interface TerminalCollectionListProps {
@@ -11,35 +12,30 @@ interface TerminalCollectionListProps {
   onEvent: (event: UIEvent) => void;
 }
 
-export function TerminalCollectionList({
+export const TerminalCollectionList = memo(function TerminalCollectionList({
   terminalCollections,
   isLoading,
   onEvent
 }: TerminalCollectionListProps) {
+  
   const {
-    currentProjectRoot,
     newlyCreatedTerminalCollectionId,
     showTerminalCollectionCreatedFeedback,
     hideTerminalCollectionCreatedFeedback,
-    openCreateTerminalCollectionDialog,
-    scripts
-  } = useCodeStateStore();
+    openCreateTerminalCollectionDialog
+  } = useTerminalCollectionStore();
+  
+  const { currentProjectRoot } = useConfigStore();
+  const { scripts } = useScriptStore();
 
-  console.log('TerminalCollectionList: Received scripts:', scripts);
-  console.log('TerminalCollectionList: Received terminal collections:', terminalCollections);
-  console.log('TerminalCollectionList: isLoading:', isLoading);
-  console.log('TerminalCollectionList: currentProjectRoot:', currentProjectRoot);
 
   // Helper function to get script names from scripts array
   const getScriptNamesFromScripts = (scriptsArray: any[]) => {
-    console.log('TerminalCollectionList: scriptsArray:', scriptsArray);
     const scriptIds = scriptsArray.map(ref => ref.id);
     const scriptData = scripts.filter(script => scriptIds.includes(script.id));
-    console.log('TerminalCollectionList: scriptData:', scriptData);
     const scriptNames = scriptData
       .map(script => <><b>{script.name}</b>: {script?.commands?.map((c: any) => <><br />{c.command}</>)}</>)
       .filter(Boolean);
-    console.log('TerminalCollectionList: scriptNames:', scriptNames);
     return scriptNames;
   };
 
@@ -54,21 +50,22 @@ export function TerminalCollectionList({
     }
   }, [showTerminalCollectionCreatedFeedback, newlyCreatedTerminalCollectionId, hideTerminalCollectionCreatedFeedback]);
 
-  const handleCreateTerminalCollection = () => {
+  // Memoize event handlers
+  const handleCreateTerminalCollection = useCallback(() => {
     openCreateTerminalCollectionDialog(currentProjectRoot || '');
-  };
+  }, [openCreateTerminalCollectionDialog, currentProjectRoot]);
 
-  const handleExecuteTerminalCollection = (id: string) => {
+  const handleExecuteTerminalCollection = useCallback((id: string) => {
     onEvent({ type: 'EXECUTE_TERMINAL_COLLECTION', payload: { id } });
-  };
+  }, [onEvent]);
 
-  const handleDeleteTerminalCollection = (id: string) => {
+  const handleDeleteTerminalCollection = useCallback((id: string) => {
     onEvent({ type: 'DELETE_TERMINAL_COLLECTION', payload: { id } });
-  };
+  }, [onEvent]);
 
-  const handleEditTerminalCollection = (id: string) => {
+  const handleEditTerminalCollection = useCallback((id: string) => {
     onEvent({ type: 'EDIT_TERMINAL_COLLECTION', payload: { id } });
-  };
+  }, [onEvent]);
   if (isLoading) {
     return (
       <div className="terminal-collection-list">
@@ -180,7 +177,7 @@ export function TerminalCollectionList({
                     <div className="terminal-collection-detail">
                       <span className="detail-label">Scripts:</span>
                       <span className="detail-value">
-                        {collection.scripts.length > 0
+                        {collection.scriptReferences && collection.scriptReferences.length > 0
                           ? getScriptNamesFromScripts(collection.scriptReferences)
                           : 'No scripts'
                         }
@@ -199,4 +196,4 @@ export function TerminalCollectionList({
       </div>
     </div>
   );
-}
+});

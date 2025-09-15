@@ -1,20 +1,31 @@
 import { useCallback } from 'preact/hooks';
-import { useCodeStateStore, type UIEvent } from '../store/codestateStore';
+import { useSessionStore, useScriptStore, useTerminalCollectionStore, useConfigStore } from '../store/combinedStore';
+import type { UIEvent } from '../store/codestateStore';
 import type { DataProvider } from '../providers/DataProvider';
 
 export function useUIEvents(provider: DataProvider) {
-  const openCreateSessionDialog = useCodeStateStore((state) => state.openCreateSessionDialog);
-  const openEditDialog = useCodeStateStore((state) => state.openEditDialog);
-  const openDeleteDialog = useCodeStateStore((state) => state.openDeleteDialog);
-  const openScriptDeleteDialog = useCodeStateStore((state) => state.openScriptDeleteDialog);
-  const openScriptEditDialog = useCodeStateStore((state) => state.openScriptEditDialog);
-  const openTerminalCollectionDeleteDialog = useCodeStateStore((state) => state.openTerminalCollectionDeleteDialog);
-  const openTerminalCollectionEditDialog = useCodeStateStore((state) => state.openTerminalCollectionEditDialog);
-  const setSessionData = useCodeStateStore((state) => state.setSessionData);
-  const setSessionDataError = useCodeStateStore((state) => state.setSessionDataError);
-  const sessions = useCodeStateStore((state) => state.sessions);
-  const scripts = useCodeStateStore((state) => state.scripts);
-  const terminalCollections = useCodeStateStore((state) => state.terminalCollections);
+  const { 
+    openEditDialog, 
+    openDeleteDialog, 
+    sessions 
+  } = useSessionStore();
+  
+  const { 
+    openScriptDeleteDialog, 
+    openScriptEditDialog, 
+    openCreateScriptDialog,
+    scripts 
+  } = useScriptStore();
+  
+  const { 
+    currentProjectRoot 
+  } = useConfigStore();
+  
+  const { 
+    openTerminalCollectionDeleteDialog, 
+    openTerminalCollectionEditDialog, 
+    terminalCollections 
+  } = useTerminalCollectionStore();
 
   const handleEvent = useCallback((event: UIEvent) => {
     switch (event.type) {
@@ -51,7 +62,7 @@ export function useUIEvents(provider: DataProvider) {
         
       case 'CREATE_SCRIPT':
         console.log('Create script clicked');
-        // TODO: Implement script creation
+        openCreateScriptDialog(currentProjectRoot || undefined);
         break;
         
       case 'RUN_SCRIPT':
@@ -104,7 +115,7 @@ export function useUIEvents(provider: DataProvider) {
       default:
         console.warn('Unknown event type:', event);
     }
-  }, [provider, setSessionData, setSessionDataError, openCreateSessionDialog, openEditDialog, openDeleteDialog, openScriptDeleteDialog, openScriptEditDialog, openTerminalCollectionDeleteDialog, openTerminalCollectionEditDialog, sessions, scripts, terminalCollections]);
+  }, [provider, openDeleteDialog, openEditDialog, openScriptDeleteDialog, openScriptEditDialog, openCreateScriptDialog, openTerminalCollectionDeleteDialog, openTerminalCollectionEditDialog, sessions, scripts, terminalCollections, currentProjectRoot]);
 
   return { handleEvent };
 }

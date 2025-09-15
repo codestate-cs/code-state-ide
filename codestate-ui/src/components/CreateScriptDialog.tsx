@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'preact/hooks';
 import { Dialog } from './Dialog';
-import { useCodeStateStore } from '../store/codestateStore';
+import { useScriptStore } from '../store/combinedStore';
 import type { DataProvider } from '../providers/DataProvider';
 import './CreateScriptDialog.css';
 import type { Script } from '../types/session';
@@ -38,15 +38,15 @@ export function CreateScriptDialog({
     rootPath: rootPath,
     commands: [{ command: '', name: '', priority: 1 }],
     lifecycle: ['open'],
-    executionMode: 'same-terminal',
+    executionMode: 'new-terminals',
     closeTerminalAfterExecution: false
   });
   const [isCreating, setIsCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
 
   // Get Zustand store actions
-  const setTempScriptData = useCodeStateStore((state) => state.setTempScriptData);
-  const setCurrentScript = useCodeStateStore((state) => state.setCurrentScript);
+  const setTempScriptData = useScriptStore((state) => state.setTempScriptData);
+  const setCurrentScript = useScriptStore((state) => state.setCurrentScript);
 
   // Pre-fill form when editing
   useEffect(() => {
@@ -58,7 +58,7 @@ export function CreateScriptDialog({
           ? editScript.commands 
           : [{ command: '', name: '', priority: 1 }],
         lifecycle: editScript.lifecycle || ['open'],
-        executionMode: editScript.executionMode || 'same-terminal',
+        executionMode: editScript.executionMode || 'new-terminals',
         closeTerminalAfterExecution: editScript.closeTerminalAfterExecution || false
       });
     } else {
@@ -68,7 +68,7 @@ export function CreateScriptDialog({
         rootPath: rootPath,
         commands: [{ command: '', name: '', priority: 1 }],
         lifecycle: ['open'],
-        executionMode: 'same-terminal',
+        executionMode: 'new-terminals',
         closeTerminalAfterExecution: false
       });
     }
@@ -181,149 +181,141 @@ export function CreateScriptDialog({
 
   return (
     <Dialog isOpen={isOpen} onClose={handleClose} title={editScript ? "Edit Script" : "Create Script"}>
-      <form onSubmit={handleSubmit} className="create-script-form">
-        <div className="form-group">
-          <label htmlFor="script-name">Script Name *</label>
-          <input
-            id="script-name"
-            type="text"
-            value={formData.name}
-            onInput={(e) => setFormData(prev => ({ ...prev, name: (e.target as HTMLInputElement).value }))}
-            placeholder="Enter script name"
-            required
-            disabled={isCreating}
-          />
-        </div>
+      <div className="create-script-container">
+        <form onSubmit={handleSubmit} className="create-script-form">
+          <div className="form-content">
+            <div className="form-group">
+              <label htmlFor="script-name">Script Name *</label>
+              <input
+                id="script-name"
+                type="text"
+                value={formData.name}
+                onInput={(e) => setFormData(prev => ({ ...prev, name: (e.target as HTMLInputElement).value }))}
+                placeholder="Enter script name"
+                required
+                disabled={isCreating}
+              />
+            </div>
 
-        <div className="form-group">
-          <label htmlFor="root-path">Root Path *</label>
-          <input
-            id="root-path"
-            type="text"
-            value={formData.rootPath}
-            onInput={(e) => setFormData(prev => ({ ...prev, rootPath: (e.target as HTMLInputElement).value }))}
-            placeholder="Enter root path"
-            required
-            disabled={isCreating}
-          />
-        </div>
+            <div className="form-group">
+              <label htmlFor="root-path">Root Path *</label>
+              <input
+                id="root-path"
+                type="text"
+                value={formData.rootPath}
+                onInput={(e) => setFormData(prev => ({ ...prev, rootPath: (e.target as HTMLInputElement).value }))}
+                placeholder="Enter root path"
+                required
+                disabled={isCreating}
+              />
+            </div>
 
 
-        <div className="form-group">
-          <label>Commands</label>
-          <div className="commands-section">
-            {formData.commands.map((cmd, index) => (
-              <div key={index} className="command-row">
-                <input
-                  type="text"
-                  value={cmd.name}
-                  onInput={(e) => updateCommand(index, 'name', (e.target as HTMLInputElement).value)}
-                  placeholder="Command name"
-                  disabled={isCreating}
-                />
-                <input
-                  type="text"
-                  value={cmd.command}
-                  onInput={(e) => updateCommand(index, 'command', (e.target as HTMLInputElement).value)}
-                  placeholder="Command"
-                  disabled={isCreating}
-                />
-                <input
-                  type="number"
-                  value={cmd.priority}
-                  onInput={(e) => updateCommand(index, 'priority', parseInt((e.target as HTMLInputElement).value) || 1)}
-                  placeholder="Priority"
-                  min="1"
-                  disabled={isCreating}
-                />
+            <div className="form-group">
+              <label>Commands</label>
+              <div className="commands-section">
+                {formData.commands.map((cmd, index) => (
+                  <div key={index} className="command-row">
+                    <input
+                      type="text"
+                      value={cmd.name}
+                      onInput={(e) => updateCommand(index, 'name', (e.target as HTMLInputElement).value)}
+                      placeholder="Command name"
+                      disabled={isCreating}
+                    />
+                    <input
+                      type="text"
+                      value={cmd.command}
+                      onInput={(e) => updateCommand(index, 'command', (e.target as HTMLInputElement).value)}
+                      placeholder="Command"
+                      disabled={isCreating}
+                    />
+                    <input
+                      type="number"
+                      value={cmd.priority}
+                      onInput={(e) => updateCommand(index, 'priority', parseInt((e.target as HTMLInputElement).value) || 1)}
+                      placeholder="Priority"
+                      min="1"
+                      disabled={isCreating}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeCommand(index)}
+                      disabled={isCreating || formData.commands.length === 1}
+                      className="btn-remove"
+                      title="Remove command"
+                    >
+                      ❌
+                    </button>
+                  </div>
+                ))}
                 <button
                   type="button"
-                  onClick={() => removeCommand(index)}
-                  disabled={isCreating || formData.commands.length === 1}
-                  className="btn-remove"
-                  title="Remove command"
+                  onClick={addCommand}
+                  disabled={isCreating}
+                  className="btn-add-command"
                 >
-                  ❌
+                  Add Command
                 </button>
               </div>
-            ))}
-            <button
-              type="button"
-              onClick={addCommand}
-              disabled={isCreating}
-              className="btn-add-command"
-            >
-              Add Command
-            </button>
-          </div>
-        </div>
+            </div>
 
-        <div className="form-group">
-          <label>Lifecycle Events</label>
-          <div className="lifecycle-options">
-            {['open', 'resume', 'none'].map(lifecycle => (
-              <label key={lifecycle} className="checkbox-label">
+            <div className="form-group">
+              <label>Lifecycle Events</label>
+              <div className="lifecycle-options">
+                {['open', 'resume', 'none'].map(lifecycle => (
+                  <label key={lifecycle} className="checkbox-label">
+                    <input
+                      type="checkbox"
+                      checked={formData.lifecycle.includes(lifecycle)}
+                      onChange={() => toggleLifecycle(lifecycle)}
+                      disabled={isCreating}
+                    />
+                    {lifecycle.charAt(0).toUpperCase() + lifecycle.slice(1)}
+                  </label>
+                ))}
+              </div>
+            </div>
+
+
+            <div className="form-group">
+              <label className="checkbox-label">
                 <input
                   type="checkbox"
-                  checked={formData.lifecycle.includes(lifecycle)}
-                  onChange={() => toggleLifecycle(lifecycle)}
+                  checked={formData.closeTerminalAfterExecution}
+                  onChange={(e) => setFormData(prev => ({ ...prev, closeTerminalAfterExecution: (e.target as HTMLInputElement).checked }))}
                   disabled={isCreating}
                 />
-                {lifecycle.charAt(0).toUpperCase() + lifecycle.slice(1)}
+                Close Terminal After Execution
               </label>
-            ))}
+            </div>
+
+            {createError && (
+              <div className="error-message">
+                {createError}
+              </div>
+            )}
           </div>
-        </div>
 
-        <div className="form-group">
-          <label htmlFor="execution-mode">Execution Mode</label>
-          <select
-            id="execution-mode"
-            value={formData.executionMode}
-            onChange={(e) => setFormData(prev => ({ ...prev, executionMode: (e.target as HTMLSelectElement).value as 'same-terminal' | 'new-terminals' }))}
-            disabled={isCreating}
-          >
-            <option value="same-terminal">Same Terminal</option>
-            <option value="new-terminals">New Terminals</option>
-          </select>
-        </div>
-
-        <div className="form-group">
-          <label className="checkbox-label">
-            <input
-              type="checkbox"
-              checked={formData.closeTerminalAfterExecution}
-              onChange={(e) => setFormData(prev => ({ ...prev, closeTerminalAfterExecution: (e.target as HTMLInputElement).checked }))}
+          <div className="form-actions">
+            <button
+              type="button"
+              onClick={handleClose}
               disabled={isCreating}
-            />
-            Close Terminal After Execution
-          </label>
-        </div>
-
-        {createError && (
-          <div className="error-message">
-            {createError}
+              className="btn-secondary"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isCreating || !formData.name.trim() || !formData.rootPath.trim()}
+              className="btn-primary"
+            >
+              {isCreating ? (editScript ? 'Updating...' : 'Creating...') : (editScript ? 'Update Script' : 'Create Script')}
+            </button>
           </div>
-        )}
-
-        <div className="form-actions">
-          <button
-            type="button"
-            onClick={handleClose}
-            disabled={isCreating}
-            className="btn-secondary"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={isCreating || !formData.name.trim() || !formData.rootPath.trim()}
-            className="btn-primary"
-          >
-            {isCreating ? (editScript ? 'Updating...' : 'Creating...') : (editScript ? 'Update Script' : 'Create Script')}
-          </button>
-        </div>
-      </form>
+        </form>
+      </div>
     </Dialog>
   );
 }

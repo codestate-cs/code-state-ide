@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { WebviewProvider } from './webview/WebviewProvider';
 import { Logger } from './utils/logger';
+import { AutoResumeService } from './services/AutoResumeService';
 
 export function activate(context: vscode.ExtensionContext) {
   const logger = Logger.getInstance('Extension');
@@ -8,6 +9,12 @@ export function activate(context: vscode.ExtensionContext) {
 
   // Get webview provider instance
   const webviewProvider = WebviewProvider.getInstance();
+
+  // Auto-resume scripts and terminal collections with 'open' lifecycle
+  const autoResumeService = AutoResumeService.getInstance();
+  autoResumeService.autoResumeForCurrentWorkspace().catch(error => {
+    logger.log(`Auto-resume failed during activation: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  });
 
   // Create status bar item
   const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
