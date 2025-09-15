@@ -4,13 +4,14 @@
   "description": "Development session management extension for VS Code and compatible IDEs that saves and restores your coding environment, including open files, terminal commands, scripts, and project state",
   "version": "1.1.0",
   "publisher": "karthikchinasani",
+  "icon": "icon.png",
   "repository": {
     "type": "git",
-    "url": "https://github.com/codestate-cs/codestate-ui.git"
+    "url": "https://github.com/codestate-cs/code-state-ide.git"
   },
-  "homepage": "https://github.com/codestate-cs/codestate-ui",
+  "homepage": "https://github.com/codestate-cs/code-state-ide",
   "bugs": {
-    "url": "https://github.com/codestate-cs/codestate-ui/issues"
+    "url": "https://github.com/codestate-cs/code-state-ide/issues"
   },
   "engines": {
     "vscode": "^1.82.0"
