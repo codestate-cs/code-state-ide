@@ -1,69 +1,95 @@
-import { CreateSessionDialog } from './CreateSessionDialog';
-import { CreateScriptDialog } from './CreateScriptDialog';
-import { CreateTerminalCollectionDialog } from './CreateTerminalCollectionDialog';
-import { ConfigDialog } from './ConfigDialog';
+import { memo, useCallback, lazy, Suspense } from 'preact/compat';
 import { AlertDialog } from './AlertDialog';
-import { useCodeStateStore } from '../store/codestateStore';
+
+// Lazy load dialog components
+const CreateSessionDialog = lazy(() => import('./CreateSessionDialog').then(module => ({ default: module.CreateSessionDialog })));
+const CreateScriptDialog = lazy(() => import('./CreateScriptDialog').then(module => ({ default: module.CreateScriptDialog })));
+const CreateTerminalCollectionDialog = lazy(() => import('./CreateTerminalCollectionDialog').then(module => ({ default: module.CreateTerminalCollectionDialog })));
+const ConfigDialog = lazy(() => import('./ConfigDialog').then(module => ({ default: module.ConfigDialog })));
+import { useSessionStore, useScriptStore, useTerminalCollectionStore, useConfigStore } from '../store/combinedStore';
 import type { DataProvider } from '../providers/DataProvider';
 
 interface PopupManagerProps {
   provider: DataProvider;
 }
 
-export function PopupManager({ provider }: PopupManagerProps) {
-  // Get popup state from store
-  const createSessionDialog = useCodeStateStore((state) => state.createSessionDialog);
-  const createScriptDialog = useCodeStateStore((state) => state.createScriptDialog);
-  const createTerminalCollectionDialog = useCodeStateStore((state) => state.createTerminalCollectionDialog);
-  const configDialog = useCodeStateStore((state) => state.configDialog);
-  const currentSession = useCodeStateStore((state) => state.currentSession);
-  const currentScript = useCodeStateStore((state) => state.currentScript);
-  const currentTerminalCollection = useCodeStateStore((state) => state.currentTerminalCollection);
-  const isEditDialogOpen = useCodeStateStore((state) => state.isEditDialogOpen);
-  const isDeleteDialogOpen = useCodeStateStore((state) => state.isDeleteDialogOpen);
-  const isScriptDeleteDialogOpen = useCodeStateStore((state) => state.isScriptDeleteDialogOpen);
-  const isScriptEditDialogOpen = useCodeStateStore((state) => state.isScriptEditDialogOpen);
-  const isTerminalCollectionDeleteDialogOpen = useCodeStateStore((state) => state.isTerminalCollectionDeleteDialogOpen);
-  const isTerminalCollectionEditDialogOpen = useCodeStateStore((state) => state.isTerminalCollectionEditDialogOpen);
+export const PopupManager = memo(function PopupManager({ provider }: PopupManagerProps) {
+  // Get popup state from individual stores
+  const { 
+    createSessionDialog, 
+    currentSession, 
+    isEditDialogOpen, 
+    isDeleteDialogOpen,
+    closeCreateSessionDialog,
+    closeEditDialog
+  } = useSessionStore();
   
-  // Get actions from store
-  const closeCreateSessionDialog = useCodeStateStore((state) => state.closeCreateSessionDialog);
-  const closeCreateScriptDialog = useCodeStateStore((state) => state.closeCreateScriptDialog);
-  const closeCreateTerminalCollectionDialog = useCodeStateStore((state) => state.closeCreateTerminalCollectionDialog);
-  const closeConfigDialog = useCodeStateStore((state) => state.closeConfigDialog);
-  const closeAllDialogs = useCodeStateStore((state) => state.closeAllDialogs);
+  const { 
+    createScriptDialog, 
+    currentScript, 
+    isScriptDeleteDialogOpen, 
+    isScriptEditDialogOpen,
+    closeCreateScriptDialog,
+    closeScriptDeleteDialog,
+    closeScriptEditDialog
+  } = useScriptStore();
   
-  // Delete session handler
-  const handleDeleteSession = () => {
+  const { 
+    createTerminalCollectionDialog, 
+    currentTerminalCollection, 
+    isTerminalCollectionDeleteDialogOpen, 
+    isTerminalCollectionEditDialogOpen,
+    closeCreateTerminalCollectionDialog,
+    closeTerminalCollectionEditDialog
+  } = useTerminalCollectionStore();
+  
+  const { 
+    configDialog, 
+    closeConfigDialog 
+  } = useConfigStore();
+  
+  // Combined close all dialogs action
+  const closeAllDialogs = () => {
+    closeCreateSessionDialog();
+    closeCreateScriptDialog();
+    closeCreateTerminalCollectionDialog();
+    closeConfigDialog();
+    // Close edit dialogs
+    closeEditDialog();
+    closeScriptEditDialog();
+    closeTerminalCollectionEditDialog();
+    // Close delete dialogs
+    closeScriptDeleteDialog();
+  };
+  
+  // Memoize delete handlers
+  const handleDeleteSession = useCallback(() => {
     if (currentSession) {
       provider.sendMessage('codestate.session.delete', { id: currentSession.id });
       closeAllDialogs();
     }
-  };
+  }, [currentSession, provider, closeAllDialogs]);
   
-  // Delete script handler
-  const handleDeleteScript = () => {
+  const handleDeleteScript = useCallback(() => {
     if (currentScript) {
       provider.sendMessage('codestate.script.delete', { id: currentScript.id });
       closeAllDialogs();
     }
-  };
+  }, [currentScript, provider, closeAllDialogs]);
   
-  // Delete terminal collection handler
-  const handleDeleteTerminalCollection = () => {
+  const handleDeleteTerminalCollection = useCallback(() => {
     if (currentTerminalCollection) {
       provider.sendMessage('codestate.terminal-collection.delete', { id: currentTerminalCollection.id });
       closeAllDialogs();
     }
-  };
+  }, [currentTerminalCollection, provider, closeAllDialogs]);
   
-  // Cancel delete handler
-  const handleCancelDelete = () => {
+  const handleCancelDelete = useCallback(() => {
     closeAllDialogs();
-  };
+  }, [closeAllDialogs]);
 
   return (
-    <>
+    <Suspense fallback={<div className="dialog-loading">Loading...</div>}>
       {/* Create Session Dialog */}
       {createSessionDialog.isOpen && (
         <CreateSessionDialog
@@ -180,6 +206,6 @@ export function PopupManager({ provider }: PopupManagerProps) {
           onClose={closeAllDialogs}
         />
       )}
-    </>
+    </Suspense>
   );
-}
+});

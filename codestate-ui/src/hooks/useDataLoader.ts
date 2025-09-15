@@ -1,40 +1,37 @@
 import { useEffect } from 'preact/hooks';
-import { useCodeStateStore } from '../store/codestateStore';
+import { useSessionStore, useScriptStore, useTerminalCollectionStore } from '../store/combinedStore';
 import type { DataProvider } from '../providers/DataProvider';
 
 export function useDataLoader(provider: DataProvider) {
   const {
     sessions,
-    scripts,
-    terminalCollections,
     sessionsLoading,
-    scriptsLoading,
-    terminalCollectionsLoading,
     sessionsError,
-    scriptsError,
-    terminalCollectionsError,
     sessionsLoaded,
-    scriptsLoaded,
-    terminalCollectionsLoaded,
-    setSessions,
-    setScripts,
-    setTerminalCollections,
-    removeSession,
-    updateSession,
-    setCurrentProjectRoot,
     setSessionsLoading,
-    setScriptsLoading,
-    setTerminalCollectionsLoading,
     setSessionsError,
+    needsData: sessionsNeedsData
+  } = useSessionStore();
+  
+  const {
+    scripts,
+    scriptsLoading,
+    scriptsError,
+    scriptsLoaded,
+    setScriptsLoading,
     setScriptsError,
+    needsData: scriptsNeedsData
+  } = useScriptStore();
+  
+  const {
+    terminalCollections,
+    terminalCollectionsLoading,
+    terminalCollectionsError,
+    terminalCollectionsLoaded,
+    setTerminalCollectionsLoading,
     setTerminalCollectionsError,
-    setSessionsLoaded,
-    setScriptsLoaded,
-    setTerminalCollectionsLoaded,
-    closeCreateSessionDialog,
-    displaySessionCreatedFeedback,
-    needsData
-  } = useCodeStateStore();
+    needsData: terminalCollectionsNeedsData
+  } = useTerminalCollectionStore();
 
 
   // Initialize data loading
@@ -64,22 +61,22 @@ export function useDataLoader(provider: DataProvider) {
 
   // Auto-initialize data when needed
   useEffect(() => {
-    if (needsData('sessions')) {
+    if (sessionsNeedsData()) {
       initializeSessions();
     }
-  }, [needsData('sessions')]);
+  }, [sessionsLoaded, sessionsLoading]);
 
   useEffect(() => {
-    if (needsData('scripts')) {
+    if (scriptsNeedsData()) {
       initializeScripts();
     }
-  }, [needsData('scripts')]);
+  }, [scriptsLoaded, scriptsLoading]);
 
   useEffect(() => {
-    if (needsData('terminalCollections')) {
+    if (terminalCollectionsNeedsData()) {
       initializeTerminalCollections();
     }
-  }, [needsData('terminalCollections')]);
+  }, [terminalCollectionsLoaded, terminalCollectionsLoading]);
 
   // Session event handlers are managed directly by SessionManager - no manual setup needed
 

@@ -24,5 +24,9 @@ export default [{
         eqeqeq: "warn",
         "no-throw-literal": "warn",
         semi: "warn",
+        
+        // Allow all console methods in development
+        // Vite production build will remove them automatically
+        "no-console": "off",
     },
 }];

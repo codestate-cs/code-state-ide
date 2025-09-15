@@ -1,7 +1,6 @@
-import { useCodeStateStore } from '../store/codestateStore';
+import { useSessionStore } from '../store/combinedStore';
 
 export class SessionManager {
-  private store = useCodeStateStore.getState();
 
   // Session initialization
   initializeSessions(): void {
@@ -12,47 +11,50 @@ export class SessionManager {
   // Handle session init response
   handleSessionsInitResponse(data: any): void {
     console.log('SessionManager: Received sessions init response', data);
-    this.store.setSessions(data.sessions || []);
-    this.store.setCurrentProjectRoot(data.currentProjectRoot || null);
-    this.store.setSessionsLoaded(true);
-    this.store.setSessionsLoading(false);
+    const sessionStore = useSessionStore.getState();
+    sessionStore.setSessions(data.sessions || []);
+    sessionStore.setSessionsLoaded(true);
+    sessionStore.setSessionsLoading(false);
   }
 
   // Handle session create response
   handleSessionCreateResponse(data: any): void {
     console.log('SessionManager: Received session create response', data);
+    const sessionStore = useSessionStore.getState();
     if (data.payload && data.payload.success) {
       // Add the temp session with the received ID to the store
       if (data.payload.id) {
-        this.store.addTempSessionWithId(data.payload.id);
-        this.store.displaySessionCreatedFeedback(data.payload.id);
+        sessionStore.addTempSessionWithId(data.payload.id);
+        sessionStore.displaySessionCreatedFeedback(data.payload.id);
       }
       // Close the create session dialog
-      this.store.closeCreateSessionDialog();
+      sessionStore.closeCreateSessionDialog();
     } else if (data.payload && data.payload.error) {
       // Handle error case
       console.error('Session creation failed:', data.payload.error);
-      this.store.setSessionDataError(data.payload.error);
+      sessionStore.setSessionDataError(data.payload.error);
     }
   }
 
   // Handle session delete response
   handleSessionDeleteResponse(data: any): void {
     console.log('SessionManager: Received session delete response', data);
+    const sessionStore = useSessionStore.getState();
     if (data.status === 'success') {
-      this.store.removeSession(data.payload.id);
+      sessionStore.removeSession(data.payload.id);
     }
   }
 
   // Handle session update response
   handleSessionUpdateResponse(data: any): void {
     console.log('SessionManager: Received session update response', data);
+    const sessionStore = useSessionStore.getState();
     if (data.status === 'success') {
       // Close the edit dialog
-      this.store.closeAllDialogs();
+      sessionStore.closeEditDialog();
       
       // Update the session in the store
-      this.store.updateSession(data.payload.session);
+      sessionStore.updateSession(data.payload.session);
     }
   }
 
@@ -71,11 +73,12 @@ export class SessionManager {
   // Handle session create init response
   handleSessionCreateInitResponse(data: any): void {
     console.log('SessionManager: Received session create init response', data);
+    const sessionStore = useSessionStore.getState();
     if (data.status === 'error') {
-      this.store.setSessionDataError(data.error);
+      sessionStore.setSessionDataError(data.error);
     } else {
-      this.store.setSessionData(data.sessionData);
-      this.store.openCreateSessionDialog();
+      sessionStore.setSessionData(data.sessionData);
+      sessionStore.openCreateSessionDialog();
     }
   }
 }

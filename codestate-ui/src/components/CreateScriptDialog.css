@@ -1,11 +1,48 @@
 /* Create Script Dialog Styles */
 
+.create-script-container {
+  display: flex;
+  flex-direction: column;
+  min-width: 500px;
+  max-width: 600px;
+  height: 70vh;
+  max-height: 70vh;
+}
+
 .create-script-form {
   display: flex;
   flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.form-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-md);
+  display: flex;
+  flex-direction: column;
   gap: var(--space-md);
-  min-width: 500px;
-  max-width: 600px;
+  min-height: 0;
+}
+
+/* Custom scrollbar for form content */
+.form-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.form-content::-webkit-scrollbar-track {
+  background: var(--muted);
+  border-radius: 3px;
+}
+
+.form-content::-webkit-scrollbar-thumb {
+  background: var(--muted-foreground);
+  border-radius: 3px;
+}
+
+.form-content::-webkit-scrollbar-thumb:hover {
+  background: var(--foreground);
 }
 
 .form-group {
@@ -152,8 +189,10 @@
   display: flex;
   justify-content: flex-end;
   gap: var(--space-sm);
-  padding-top: var(--space-md);
+  padding: var(--space-md);
   border-top: 1px solid var(--border);
+  background: var(--background);
+  flex-shrink: 0;
 }
 
 .btn-primary,

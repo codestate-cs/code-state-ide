@@ -1,36 +1,32 @@
-import { useCodeStateStore } from '../store/codestateStore';
-import type { TerminalCollectionWithScripts } from '../types/session';
+import { useTerminalCollectionStore } from '../store/combinedStore';
 
 export class TerminalCollectionManager {
-  private store: ReturnType<typeof useCodeStateStore.getState>;
-
-  constructor() {
-    this.store = useCodeStateStore.getState();
-  }
 
   // Handle terminal collection initialization response
   handleTerminalCollectionsInitResponse(data: any): void {
     console.log('TerminalCollectionManager: Received terminal collections init response', data);
+    const terminalCollectionStore = useTerminalCollectionStore.getState();
     if (data.status === 'success' && data.payload && data.payload.terminalCollections) {
-      this.store.setTerminalCollections(data.payload.terminalCollections);
-      this.store.setTerminalCollectionsLoaded(true);
-      this.store.setTerminalCollectionsLoading(false);
+      terminalCollectionStore.setTerminalCollections(data.payload.terminalCollections);
+      terminalCollectionStore.setTerminalCollectionsLoaded(true);
+      terminalCollectionStore.setTerminalCollectionsLoading(false);
     } else {
-      this.store.setTerminalCollectionsError(data.payload?.error || 'Failed to load terminal collections');
-      this.store.setTerminalCollectionsLoading(false);
+      terminalCollectionStore.setTerminalCollectionsError(data.payload?.error || 'Failed to load terminal collections');
+      terminalCollectionStore.setTerminalCollectionsLoading(false);
     }
   }
 
   // Handle terminal collection creation response
   handleTerminalCollectionCreateResponse(data: any): void {
     console.log('TerminalCollectionManager: Received terminal collection create response', data);
+    const terminalCollectionStore = useTerminalCollectionStore.getState();
     if (data.status === 'success' && data.payload && data.payload.id) {
       // Add the temp terminal collection with the new ID
-      this.store.addTempTerminalCollectionWithId(data.payload.id);
+      terminalCollectionStore.addTempTerminalCollectionWithId(data.payload.id);
       // Show feedback
-      this.store.displayTerminalCollectionCreatedFeedback(data.payload.id);
+      terminalCollectionStore.displayTerminalCollectionCreatedFeedback(data.payload.id);
       // Close the dialog
-      this.store.closeCreateTerminalCollectionDialog();
+      terminalCollectionStore.closeCreateTerminalCollectionDialog();
     } else {
       console.error('Terminal collection creation failed:', data.payload?.error);
     }
@@ -39,22 +35,23 @@ export class TerminalCollectionManager {
   // Handle terminal collection deletion response
   handleTerminalCollectionDeleteResponse(data: any): void {
     console.log('TerminalCollectionManager: Received terminal collection delete response', data);
+    const terminalCollectionStore = useTerminalCollectionStore.getState();
     if (data.status === 'success') {
-      this.store.removeTerminalCollection(data.payload.id);
+      terminalCollectionStore.removeTerminalCollection(data.payload.id);
     }
   }
 
   // Handle terminal collection update response
   handleTerminalCollectionUpdateResponse(data: any): void {
     console.log('TerminalCollectionManager: Received terminal collection update response', data);
+    const terminalCollectionStore = useTerminalCollectionStore.getState();
     if (data.status === 'success') {
-      // Get the current state to access the updated currentTerminalCollection BEFORE closing dialog
-      const currentState = useCodeStateStore.getState();
-      const currentTerminalCollection = currentState.currentTerminalCollection;
+      // Get the current terminal collection before closing dialog
+      const currentTerminalCollection = terminalCollectionStore.currentTerminalCollection;
       console.log('TerminalCollectionManager: Current terminal collection before closing dialog:', currentTerminalCollection);
       
       // Close the edit dialog
-      this.store.closeAllDialogs();
+      terminalCollectionStore.closeTerminalCollectionEditDialog();
       
       // Update the terminal collection in the store with the new data
       if (currentTerminalCollection && data.payload && data.payload.id) {
@@ -64,7 +61,7 @@ export class TerminalCollectionManager {
           id: data.payload.id
         };
         console.log('TerminalCollectionManager: Updating terminal collection in store:', updatedTerminalCollection);
-        currentState.updateTerminalCollection(updatedTerminalCollection);
+        terminalCollectionStore.updateTerminalCollection(updatedTerminalCollection);
       } else {
         console.log('TerminalCollectionManager: No currentTerminalCollection or payload.id found');
         console.log('TerminalCollectionManager: currentTerminalCollection:', currentTerminalCollection);

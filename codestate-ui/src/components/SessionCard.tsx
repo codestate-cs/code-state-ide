@@ -1,12 +1,22 @@
+import { memo } from 'preact/compat';
+import { useMemo } from 'preact/hooks';
 import { Card, CardHeader, CardContent } from './Card';
 import type { SessionCardProps } from '../types/session';
 
-export function SessionCard({
+export const SessionCard = memo(function SessionCard({
   session,
   isNewlyCreated = false
 }: SessionCardProps) {
+  // Create a reusable date formatter
+  const dateFormatter = useMemo(() => new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  }), []);
+
   const formatDate = (date: Date | string | undefined) => {
-    console.log('formatDate', date);
     if(!date) return '';
     
     // Convert string to Date if needed
@@ -18,27 +28,34 @@ export function SessionCard({
       return 'Invalid date';
     }
     
-    return new Intl.DateTimeFormat('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    }).format(dateObj);
+    return dateFormatter.format(dateObj);
   };
 
-  const getProjectName = (projectRoot: string) => {
-    return projectRoot.split('/').pop() || projectRoot;
-  };
-
-  const getGitStatus = (git: any) => {
-    if (git.isDirty) {
+  // Memoize expensive calculations
+  const formattedCreatedDate = useMemo(() => 
+    formatDate(session.createdAt), [session.createdAt, dateFormatter]
+  );
+  
+  const formattedUpdatedDate = useMemo(() => 
+    formatDate(session.updatedAt), [session.updatedAt, dateFormatter]
+  );
+  
+  const projectName = useMemo(() => 
+    session.projectRoot.split('/').pop() || session.projectRoot, 
+    [session.projectRoot]
+  );
+  
+  const gitStatus = useMemo(() => {
+    if (session.git.isDirty) {
       return { status: 'dirty', text: 'Uncommitted changes', color: 'var(--destructive)' };
     }
     return { status: 'clean', text: 'Clean', color: 'var(--primary)' };
-  };
-
-  const gitStatus = getGitStatus(session.git);
+  }, [session.git.isDirty]);
+  
+  const activeFile = useMemo(() => 
+    session.files.find(f => f.isActive)?.path.split('/').pop(), 
+    [session.files]
+  );
 
   return (
     <Card variant="elevated" className={`session-card ${isNewlyCreated ? 'newly-created' : ''}`}>
@@ -108,8 +125,8 @@ export function SessionCard({
             <span className="detail-label">Files:</span>
             <span className="detail-value">
               {session.files.length} file{session.files.length !== 1 ? 's' : ''}
-              {session.files.find(f => f.isActive) && (
-                <span className="active-file"> • Active: {session.files.find(f => f.isActive)?.path.split('/').pop()}</span>
+              {activeFile && (
+                <span className="active-file"> • Active: {activeFile}</span>
               )}
             </span>
           </div>
@@ -149,15 +166,15 @@ export function SessionCard({
           <div className="session-timestamps">
             <div className="timestamp">
               <span className="timestamp-label">Created:</span>
-              <span className="timestamp-value">{formatDate(session.createdAt)}</span>
+              <span className="timestamp-value">{formattedCreatedDate}</span>
             </div>
             <div className="timestamp">
               <span className="timestamp-label">Updated:</span>
-              <span className="timestamp-value">{formatDate(session.updatedAt)}</span>
+              <span className="timestamp-value">{formattedUpdatedDate}</span>
             </div>
           </div>
         </div>
       </CardContent>
     </Card>
   );
-}
+});

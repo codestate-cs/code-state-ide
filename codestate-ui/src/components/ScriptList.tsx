@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'preact/hooks';
+import { memo } from 'preact/compat';
+import { useState, useEffect, useCallback, useMemo } from 'preact/hooks';
 import { Card, CardContent } from './Card';
 import { ScriptCard } from './ScriptCard';
 import { Accordion } from './Accordion';
-import { useCodeStateStore } from '../store/codestateStore';
+import { useScriptStore, useConfigStore } from '../store/combinedStore';
 import type { Script } from '../types/session';
 import type { UIEvent } from '../store/codestateStore';
 import './ScriptList.css';
@@ -13,24 +14,22 @@ interface ScriptListProps {
   onEvent: (event: UIEvent) => void;
 }
 
-export function ScriptList({
+export const ScriptList = memo(function ScriptList({
   scripts,
   isLoading,
   onEvent
 }: ScriptListProps) {
   const [searchTerm, setSearchTerm] = useState('');
+  
   const { 
-    currentProjectRoot, 
     newlyCreatedScriptId, 
     showScriptCreatedFeedback,
     hideScriptCreatedFeedback,
     openCreateScriptDialog
-  } = useCodeStateStore();
+  } = useScriptStore();
   
-  console.log('ScriptList: Received scripts:', scripts);
-  console.log('ScriptList: isLoading:', isLoading);
-  console.log('ScriptList: scripts.length:', scripts.length);
-  console.log('ScriptList: currentProjectRoot:', currentProjectRoot);
+  const { currentProjectRoot } = useConfigStore();
+  
 
   // Hide feedback after 3 seconds
   useEffect(() => {
@@ -43,13 +42,21 @@ export function ScriptList({
     }
   }, [showScriptCreatedFeedback, newlyCreatedScriptId, hideScriptCreatedFeedback]);
 
-  // Event delegation handler
-  const handleEventDelegation = (e: Event) => {
+  // Memoize event delegation handler
+  const handleEventDelegation = useCallback((e: Event) => {
     const target = e.target as HTMLElement;
-    const action = target.dataset.action;
-    const scriptId = target.dataset.scriptId;
+    
+    // Find the closest element with data-action attribute
+    const actionElement = target.closest('[data-action]') as HTMLElement;
+    if (!actionElement) return;
+    
+    const action = actionElement.dataset.action;
+    const scriptId = actionElement.dataset.scriptId;
     
     if (!action) return;
+    
+    // Prevent event bubbling to avoid multiple handlers
+    e.stopPropagation();
     
     switch (action) {
       case 'create-script':
@@ -71,18 +78,18 @@ export function ScriptList({
         }
         break;
     }
-  };
+  }, [openCreateScriptDialog, currentProjectRoot, onEvent]);
 
-  // Filter scripts based on search term
-  const filteredScripts = scripts.filter(script =>
-    script.name.toLowerCase().includes(searchTerm.toLowerCase())
+  // Memoize filtered scripts
+  const filteredScripts = useMemo(() => 
+    scripts.filter(script =>
+      script.name.toLowerCase().includes(searchTerm.toLowerCase())
+    ), [scripts, searchTerm]
   );
   
-  console.log('ScriptList: filteredScripts:', filteredScripts);
-  console.log('ScriptList: filteredScripts.length:', filteredScripts.length);
 
-  // Group scripts by rootPath
-  const groupScriptsByPath = (scripts: Script[]) => {
+  // Memoize group scripts by path function
+  const groupScriptsByPath = useCallback((scripts: Script[]) => {
     const groups: { [key: string]: Script[] } = {};
     
     scripts.forEach(script => {
@@ -94,58 +101,73 @@ export function ScriptList({
     });
     
     return groups;
-  };
+  }, []);
 
-  const scriptGroups = groupScriptsByPath(filteredScripts);
-  const groupEntries = Object.entries(scriptGroups);
+  // Memoize script groups
+  const scriptGroups = useMemo(() => 
+    groupScriptsByPath(filteredScripts), 
+    [filteredScripts, groupScriptsByPath]
+  );
   
-  // Sort accordion items to ensure current project is always first
-  const sortedGroupEntries = groupEntries.sort(([a], [b]) => {
-    const aIsCurrent = a === currentProjectRoot;
-    const bIsCurrent = b === currentProjectRoot;
-    
-    if (aIsCurrent && !bIsCurrent) return -1;
-    if (!aIsCurrent && bIsCurrent) return 1;
-    return 0; // Keep original order for non-current projects
-  });
+  const groupEntries = useMemo(() => 
+    Object.entries(scriptGroups), 
+    [scriptGroups]
+  );
+  
+  // Memoize sorted group entries
+  const sortedGroupEntries = useMemo(() => 
+    groupEntries.sort(([a], [b]) => {
+      const aIsCurrent = a === currentProjectRoot;
+      const bIsCurrent = b === currentProjectRoot;
+      
+      if (aIsCurrent && !bIsCurrent) return -1;
+      if (!aIsCurrent && bIsCurrent) return 1;
+      return 0; // Keep original order for non-current projects
+    }), 
+    [groupEntries, currentProjectRoot]
+  );
 
-  // Create accordion items from grouped scripts
-  const accordionItems = sortedGroupEntries.map(([rootPath, groupScripts]) => {
-    const projectName = rootPath.split('/').pop() || rootPath;
-    const isCurrentProject = currentProjectRoot === rootPath;
-    
-    // Check if this group contains the newly created script
-    const hasNewlyCreatedScript = newlyCreatedScriptId && 
-      groupScripts.some(script => script.id === newlyCreatedScriptId);
-    
-    return {
-      id: `group-${rootPath}`,
-      defaultOpen: isCurrentProject || !!hasNewlyCreatedScript, // Open if current project or has newly created script
-      title: (
-        <div className="accordion-title-content">
-          <span className="project-name">{projectName}</span>
-          <span className="script-count">({groupScripts.length} script{groupScripts.length !== 1 ? 's' : ''})</span>
-          {hasNewlyCreatedScript && showScriptCreatedFeedback && (
-            <span className="new-script-indicator">✨ New!</span>
-          )}
-          <span className="accordion-title-path">{rootPath}</span>
-        </div>
-      ),
-      content: (
-        <div className="script-group-content">
-          <div className="script-group-grid">
-            {groupScripts.map((script) => (
-              <ScriptCard
-                key={script.id}
-                script={script}
-                isNewlyCreated={script.id === newlyCreatedScriptId && showScriptCreatedFeedback}
-              />
-            ))}
+  // Memoize accordion items creation
+  const accordionItems = useMemo(() => 
+    sortedGroupEntries.map(([rootPath, groupScripts]) => {
+      const projectName = rootPath.split('/').pop() || rootPath;
+      const isCurrentProject = currentProjectRoot === rootPath;
+      
+      // Check if this group contains the newly created script
+      const hasNewlyCreatedScript = newlyCreatedScriptId && 
+        groupScripts.some(script => script.id === newlyCreatedScriptId);
+      
+      
+      return {
+        id: `group-${rootPath}`,
+        defaultOpen: isCurrentProject || !!hasNewlyCreatedScript, // Open if current project or has newly created script
+        title: (
+          <div className="accordion-title-content">
+            <span className="project-name">{projectName}</span>
+            <span className="script-count">({groupScripts.length} script{groupScripts.length !== 1 ? 's' : ''})</span>
+            {hasNewlyCreatedScript && showScriptCreatedFeedback && (
+              <span className="new-script-indicator">✨ New!</span>
+            )}
+            <span className="accordion-title-path">{rootPath}</span>
           </div>
-        </div>
-      )
-    };
-  });
+        ),
+        content: (
+          <div className="script-group-content">
+            <div className="script-group-grid">
+              {groupScripts.map((script) => (
+                <ScriptCard
+                  key={script.id}
+                  script={script}
+                  isNewlyCreated={script.id === newlyCreatedScriptId && showScriptCreatedFeedback}
+                />
+              ))}
+            </div>
+          </div>
+        )
+      };
+    }), 
+    [sortedGroupEntries, currentProjectRoot, newlyCreatedScriptId, showScriptCreatedFeedback]
+  );
 
   if (isLoading) {
     return (
@@ -278,4 +300,4 @@ export function ScriptList({
       </div>
     </div>
   );
-}
+});

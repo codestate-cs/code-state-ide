@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'preact/hooks';
 import { Dialog } from './Dialog';
 import { Accordion } from './Accordion';
-import { useCodeStateStore } from '../store/codestateStore';
+import { useScriptStore, useTerminalCollectionStore } from '../store/combinedStore';
 import type { TerminalCollectionWithScripts, Script } from '../types/session';
 import type { DataProvider } from '../providers/DataProvider';
 import './CreateTerminalCollectionDialog.css';
@@ -29,7 +29,8 @@ export function CreateTerminalCollectionDialog({
   editTerminalCollection,
   provider
 }: CreateTerminalCollectionDialogProps) {
-  const { scripts, setCurrentTerminalCollection, setTempTerminalCollectionData } = useCodeStateStore();
+  const { scripts } = useScriptStore();
+  const { setCurrentTerminalCollection, setTempTerminalCollectionData } = useTerminalCollectionStore();
   
   const [formData, setFormData] = useState<CreateTerminalCollectionData>({
     name: '',
