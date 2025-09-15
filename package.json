@@ -1,10 +1,11 @@
 {
-  "name": "code-state-ide-v2",
-  "displayName": "code-state-ide-v2",
+  "name": "codestate-ide",
+  "displayName": "CodeState",
   "description": "",
   "version": "0.0.1",
+  "publisher": "karthikchinasani",
   "engines": {
-    "vscode": "^1.103.0"
+    "vscode": "^1.82.0"
   },
   "categories": [
     "Other"
@@ -16,14 +17,14 @@
   "contributes": {
     "commands": [
       {
-        "command": "code-state-ide-v2.openFullPage",
+        "command": "code-state-ide.openFullPage",
         "title": "Open Code State IDE v2"
       }
     ],
     "menus": {
       "title": [
         {
-          "command": "code-state-ide-v2.openFullPage",
+          "command": "code-state-ide.openFullPage",
           "group": "navigation@1"
         }
       ]
@@ -46,7 +47,7 @@
   "devDependencies": {
     "@types/mocha": "^10.0.10",
     "@types/node": "20.x",
-    "@types/vscode": "^1.103.0",
+    "@types/vscode": "^1.82.0",
     "@typescript-eslint/eslint-plugin": "^8.31.1",
     "@typescript-eslint/parser": "^8.31.1",
     "@vscode/test-cli": "^0.0.11",

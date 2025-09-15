@@ -20,12 +20,12 @@ export function activate(context: vscode.ExtensionContext) {
   const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
   statusBarItem.text = "$(code) Code State IDE";
   statusBarItem.tooltip = "Open Code State IDE v2";
-  statusBarItem.command = 'code-state-ide-v2.openFullPage';
+  statusBarItem.command = 'code-state-ide.openFullPage';
   statusBarItem.show();
 
   // Main command → opens the full editor webview
   context.subscriptions.push(
-    vscode.commands.registerCommand('code-state-ide-v2.openFullPage', async () => {
+    vscode.commands.registerCommand('code-state-ide.openFullPage', async () => {
       logger.log('Opening Code State IDE v2 webview');
       
       // Create webview panel using the provider

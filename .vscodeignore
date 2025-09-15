@@ -12,3 +12,11 @@ vsc-extension-quickstart.md
 **/*.map
 **/*.ts
 **/.vscode-test.*
+codestate-ui/node_modules/**
+codestate-ui/src/**
+codestate-ui/package.json
+codestate-ui/package-lock.json
+codestate-ui/tsconfig.*
+codestate-ui/index.html
+codestate-ui/README.md
+codestate-ui/public/**
