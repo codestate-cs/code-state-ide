@@ -23,14 +23,14 @@ export class WebviewProvider {
    */
   createWebviewPanel(context: vscode.ExtensionContext): vscode.WebviewPanel {
     const panel = vscode.window.createWebviewPanel(
-      'codeStateIdeV2Webview',
-      'Code State IDE v2',
+      'codeStateIdeWebview',
+      'CodeState',
       vscode.ViewColumn.One,
       {
         enableScripts: true,
         retainContextWhenHidden: true,
         localResourceRoots: [
-          vscode.Uri.file(path.join(context.extensionPath, 'resources'))
+          vscode.Uri.file(path.join(context.extensionPath, 'node_modules', '@codestate', 'ui', 'dist'))
         ]
       }
     );
@@ -54,23 +54,23 @@ export class WebviewProvider {
    * Generate HTML content for webview
    */
   private getHtml(context: vscode.ExtensionContext, webview: vscode.Webview): string {
-    // Get the URI for the CSS and JS files
-    const cssUri = webview.asWebviewUri(vscode.Uri.file(path.join(context.extensionPath, 'resources', 'codesate-ui.css')));
-    const jsUri = webview.asWebviewUri(vscode.Uri.file(path.join(context.extensionPath, 'resources', 'codesate-ui.iife.js')));
+    // Get the URI for the CSS and JS files from the npm package
+    const cssUri = webview.asWebviewUri(vscode.Uri.file(path.join(context.extensionPath, 'node_modules', '@codestate', 'ui', 'dist', 'codesate-ui.css')));
+    const jsUri = webview.asWebviewUri(vscode.Uri.file(path.join(context.extensionPath, 'node_modules', '@codestate', 'ui', 'dist', 'codesate-ui.iife.js')));
 
     return `<!DOCTYPE html>
     <html lang="en">
       <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Code State IDE v2</title>
+        <title>CodeState</title>
         <link rel="stylesheet" href="${cssUri}">
       </head>
       <body>
         <codesate-ui id="app"></codesate-ui>
         <script src="${jsUri}"></script>
         <script>
-          console.log('Code State IDE v2 Webview loaded');
+          console.log('CodeState Webview loaded');
         </script>
       </body>
     </html>`;

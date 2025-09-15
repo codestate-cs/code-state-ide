@@ -35,8 +35,13 @@ async function main() {
 		sourcesContent: false,
 		platform: 'node',
 		outfile: 'dist/extension.js',
-		external: ['vscode'],
+		external: ['vscode', '@codestate/core', 'zod'],
 		logLevel: 'silent',
+		// Tree shaking optimizations
+		treeShaking: true,
+		drop: production ? ['console', 'debugger'] : [],
+		// Additional optimizations
+		keepNames: false,
 		plugins: [
 			/* add to the end of plugins array */
 			esbuildProblemMatcherPlugin,

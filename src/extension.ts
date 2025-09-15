@@ -5,7 +5,7 @@ import { AutoResumeService } from './services/AutoResumeService';
 
 export function activate(context: vscode.ExtensionContext) {
   const logger = Logger.getInstance('Extension');
-  logger.log('Code State IDE v2 extension activated');
+  logger.log('Code State IDE extension activated');
 
   // Get webview provider instance
   const webviewProvider = WebviewProvider.getInstance();
@@ -18,15 +18,15 @@ export function activate(context: vscode.ExtensionContext) {
 
   // Create status bar item
   const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
-  statusBarItem.text = "$(code) Code State IDE";
-  statusBarItem.tooltip = "Open Code State IDE v2";
+  statusBarItem.text = "$(code) CodeState";
+  statusBarItem.tooltip = "Open CodeState";
   statusBarItem.command = 'code-state-ide.openFullPage';
   statusBarItem.show();
 
   // Main command → opens the full editor webview
   context.subscriptions.push(
     vscode.commands.registerCommand('code-state-ide.openFullPage', async () => {
-      logger.log('Opening Code State IDE v2 webview');
+      logger.log('Opening CodeState IDE webview');
       
       // Create webview panel using the provider
       const panel = webviewProvider.createWebviewPanel(context);
