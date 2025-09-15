@@ -1,22 +1,40 @@
-.vscode/**
-.vscode-test/**
-out/**
-node_modules/**
-src/**
-.gitignore
-.yarnrc
+# Exclude unnecessary files from VSIX package
+
+# Test coverage and build artifacts
+.nyc_output/
+coverage/
+*.lcov
+.vscode-test/
+
+# Development files
+.github/
+docs/
+meta.json
+eslint.config.mjs
+tsconfig.json
 esbuild.js
 vsc-extension-quickstart.md
-**/tsconfig.json
-**/eslint.config.mjs
-**/*.map
-**/*.ts
-**/.vscode-test.*
-codestate-ui/node_modules/**
-codestate-ui/src/**
-codestate-ui/package.json
-codestate-ui/package-lock.json
-codestate-ui/tsconfig.*
-codestate-ui/index.html
-codestate-ui/README.md
-codestate-ui/public/**
+.gitignore
+
+# Source files (only include compiled dist/)
+src/
+test/
+out/
+
+# Development dependencies and configs
+node_modules/
+*.log
+.env*
+
+# OS and IDE files
+.DS_Store
+.vscode/
+.idea/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Build outputs (keep only dist/)
+*.map
