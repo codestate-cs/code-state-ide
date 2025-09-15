@@ -1,14 +1,34 @@
 {
   "name": "codestate-ide",
   "displayName": "CodeState",
-  "description": "",
-  "version": "0.0.1",
+  "description": "Development session management extension for VS Code and compatible IDEs that saves and restores your coding environment, including open files, terminal commands, scripts, and project state",
+  "version": "1.1.0",
   "publisher": "karthikchinasani",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/codestate-cs/codestate-ui.git"
+  },
+  "homepage": "https://github.com/codestate-cs/codestate-ui",
+  "bugs": {
+    "url": "https://github.com/codestate-cs/codestate-ui/issues"
+  },
   "engines": {
     "vscode": "^1.82.0"
   },
   "categories": [
-    "Other"
+    "Other",
+    "SCM Providers"
+  ],
+  "keywords": [
+    "session",
+    "context",
+    "productivity",
+    "development",
+    "workspace",
+    "save",
+    "resume",
+    "git",
+    "terminal"
   ],
   "activationEvents": [
     "*"
@@ -20,22 +40,29 @@
         "command": "code-state-ide.openFullPage",
         "title": "Open CodeState",
         "category": "CodeState",
-        "icon": "$(code)"
+        "icon": "resources/icon.svg"
       }
     ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "codestate-ide",
+          "title": "CodeState IDE",
+          "icon": "resources/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "codestate-ide": [
+        {
+          "id": "codestate-ide-view",
+          "name": "CodeState IDE",
+          "when": "workspaceFolderCount > 0",
+          "type": "webview"
+        }
+      ]
+    },
     "menus": {
-      "title": [
-        {
-          "command": "code-state-ide.openFullPage",
-          "group": "navigation@2"
-        }
-      ],
-      "editor/title": [
-        {
-          "command": "code-state-ide.openFullPage",
-          "group": "navigation@2"
-        }
-      ],
       "explorer/context": [
         {
           "command": "code-state-ide.openFullPage",

@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { WebviewProvider } from './webview/WebviewProvider';
+import { HelpWebviewProvider } from './webview/HelpWebviewProvider';
 import { Logger } from './utils/logger';
 import { AutoResumeService } from './services/AutoResumeService';
 
@@ -9,6 +10,13 @@ export function activate(context: vscode.ExtensionContext) {
 
   // Get webview provider instance
   const webviewProvider = WebviewProvider.getInstance();
+  const helpWebviewProvider = HelpWebviewProvider.getInstance(context.extensionPath);
+
+  // Register webview view provider for Activity Bar
+  context.subscriptions.push(
+    vscode.window.registerWebviewViewProvider('codestate-ide-view', helpWebviewProvider)
+  );
+
 
   // Auto-resume scripts and terminal collections with 'open' lifecycle
   const autoResumeService = AutoResumeService.getInstance();
@@ -30,9 +38,6 @@ export function activate(context: vscode.ExtensionContext) {
       
       // Create webview panel using the provider
       const panel = webviewProvider.createWebviewPanel(context);
-
-      // Optional: collapse sidebar for "fullscreen" feel
-      await vscode.commands.executeCommand('workbench.action.closeSidebar');
     })
   );
 
