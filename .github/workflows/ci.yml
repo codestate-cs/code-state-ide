@@ -25,11 +25,14 @@ jobs:
         node-version: ${{ matrix.node-version }}
         cache: 'npm'
     
+    - name: Install eslint globally
+      run: npm i -g eslint
+    
     - name: Switch to production configuration
       run: npm run switch:prod
         
     - name: Install dependencies
-      run: npm i
+      run: npm i --include=dev
       
     - name: Linting
       run: npm run lint
@@ -52,12 +55,15 @@ jobs:
       with:
         node-version: '20.x'
         cache: 'npm'
+    
+    - name: Install eslint globally
+      run: npm i -g eslint
         
     - name: Switch to production configuration
       run: npm run switch:prod
       
     - name: Install dependencies
-      run: npm i
+      run: npm i --include=dev
       
     - name: Build extension
       run: npm run package
@@ -86,12 +92,15 @@ jobs:
       with:
         node-version: '20.x'
         cache: 'npm'
+    
+    - name: Install eslint globally
+      run: npm i -g eslint
         
     - name: Switch to production configuration
       run: npm run switch:prod
       
     - name: Install dependencies
-      run: npm i
+      run: npm i --include=dev
       
     - name: Build extension
       run: npm run package
