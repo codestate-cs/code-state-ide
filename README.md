@@ -1,6 +1,6 @@
 # CodeState IDE
 
-[![Version](https://img.shields.io/badge/version-1.2.0-blue.svg)](https://github.com/codestate-cs/code-state-ide)
+[![Version](https://img.shields.io/badge/version-1.2.1-blue.svg)](https://github.com/codestate-cs/code-state-ide)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![VS Code Marketplace](https://img.shields.io/badge/VS%20Code-Marketplace-blue.svg)](https://marketplace.visualstudio.com/items?itemName=karthikchinasani.codestate-ide)
 
@@ -99,7 +99,7 @@ CodeState works with any VS Code-compatible IDE:
 - **GitHub Codespaces** (browser-based VS Code)
 - **Any VS Code-based editor** that supports extensions
 
-## 📊 What's New in v1.2.0
+## 📊 What's New in v1.2.1
 
 - **✅ Improved Reliability**: Fixed extension activation issues
 - **✅ Better Performance**: Faster startup and resource management
