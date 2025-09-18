@@ -82,6 +82,7 @@ jobs:
       run: |
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
+        git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
         git tag "v${{ steps.version.outputs.version }}"
         git push origin "v${{ steps.version.outputs.version }}"
         echo "Created and pushed tag v${{ steps.version.outputs.version }}"
