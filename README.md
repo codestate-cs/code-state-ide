@@ -1,6 +1,6 @@
 # CodeState IDE
 
-[![Version](https://img.shields.io/badge/version-1.2.0-blue.svg)](https://github.com/codestate-cs/code-state-ide)
+[![Version](https://img.shields.io/badge/version-1.2.1-blue.svg)](https://github.com/codestate-cs/code-state-ide)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![VS Code Marketplace](https://img.shields.io/badge/VS%20Code-Marketplace-blue.svg)](https://marketplace.visualstudio.com/items?itemName=karthikchinasani.codestate-ide)
 
@@ -8,7 +8,7 @@
 
 ## 🎬 Demo
 
-![CodeState IDE Demo](https://github.com/codestate-cs/code-state-ide/assets/Codestate.gif)
+![CodeState IDE Demo](https://raw.githubusercontent.com/codestate-cs/code-state-ide/refs/heads/main/assets/Codestate.gif)
 
 *See CodeState IDE in action - saving and restoring your complete development environment*
 
@@ -20,7 +20,7 @@
 - **Never Lose Context**: Pick up exactly where you left off, even after restarting VS Code
 
 ### 🖥️ Terminal Command History
-- **Save Terminal Sessions**: Automatically capture terminal commands and collections
+- **Save Terminal Sessions**: Automatically run commands that are needed when you open the vscode
 - **Replay Commands**: Execute saved command sequences with a single click
 - **Organize Scripts**: Create and manage development scripts for common tasks
 
@@ -65,13 +65,6 @@
 - **Delete**: Remove sessions you no longer need
 - **Rename**: Update session names for better organization
 
-## ⚙️ Configuration
-
-Access settings through the CodeState panel:
-- **Auto-save**: Automatically save sessions at regular intervals
-- **Session Limits**: Control how many sessions to keep
-- **File Filters**: Choose which files to include/exclude from sessions
-
 ## 🎨 Features
 
 - **🎨 Beautiful Interface**: Modern, intuitive design that integrates seamlessly with VS Code
@@ -106,7 +99,7 @@ CodeState works with any VS Code-compatible IDE:
 - **GitHub Codespaces** (browser-based VS Code)
 - **Any VS Code-based editor** that supports extensions
 
-## 📊 What's New in v1.2.0
+## 📊 What's New in v1.2.1
 
 - **✅ Improved Reliability**: Fixed extension activation issues
 - **✅ Better Performance**: Faster startup and resource management
@@ -121,7 +114,19 @@ CodeState IDE makes development more efficient by eliminating the time spent rec
 
 ## 👨‍💻 For Developers
 
-Want to contribute or set up the project locally? Check out our [Development Setup Guide](https://github.com/codestate-cs/code-state-ide/DEVELOPMENT.md) for comprehensive instructions on building, testing, and contributing to CodeState IDE.
+Want to contribute or set up the project locally? 
+
+### 🚀 Quick Development Setup
+```bash
+git clone https://github.com/codestate-cs/code-state-ide.git
+cd code-state-ide
+npm install
+```
+
+This automatically clones the other repositories and sets up everything you need!
+
+### 📚 Development Guides
+- **[Development Guide](DEVELOPMENT.md)** - Complete setup and development instructions
 
 ---
 

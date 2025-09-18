@@ -6,6 +6,34 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [Unreleased]
+
+### Added
+- TBD
+
+### Changed
+- TBD
+
+### Fixed
+- TBD
+
+## [1.2.1] - 2024-09-18
+
+### Added
+- Updated @codestate/ui package to latest version
+- Enhanced CI/CD pipeline with production configuration switching
+- Improved build process with npm run switch:prod integration
+
+### Changed
+- Updated UI library dependencies for better performance
+- Enhanced build system to use production configuration
+- Improved CI/CD workflow for more reliable releases
+
+### Fixed
+- Resolved CI/CD authentication issues
+- Improved build consistency across environments
+- Enhanced production build process
+
 ## [1.2.0] - 2024-09-18
 
 ### Added
