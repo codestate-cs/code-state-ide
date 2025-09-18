@@ -104,3 +104,6 @@ temp/
 
 # TypeScript cache
 *.tsbuildinfo
+
+# Local development symlinks
+node_modules/@codestate/

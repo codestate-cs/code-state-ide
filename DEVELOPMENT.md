@@ -9,34 +9,171 @@ This guide is for developers who want to contribute to CodeState IDE or set up t
 - **VS Code** - For development and testing
 - **Git** - For version control
 
+## 🎯 Overview
+
+CodeState IDE depends on two other repositories:
+- **code-state-library**: Core functionality and CLI tools
+- **codestate-ui**: UI components and webview interface
+
+This setup ensures that when you clone `code-state-ide-v2`, you automatically get all required dependencies and can develop with local repositories.
+
 ## 🚀 Quick Setup
 
-### 1. Clone the Repository
+### Automatic Setup (Recommended)
+The development environment is automatically set up when you install dependencies:
+
 ```bash
+# Clone the main repository
 git clone https://github.com/codestate-cs/code-state-ide.git
+cd code-state-ide
+
+# Install dependencies (automatically runs setup)
+npm install
+```
+
+That's it! The `postinstall` script will automatically:
+- ✅ Clone `code-state-library` and `codestate-ui` repositories at the same level
+- ✅ Install dependencies for all projects
+- ✅ Build the core library and UI components
+- ✅ Set up local package links
+- ✅ Build the main extension
+
+### Manual Setup (Alternative)
+If you prefer to set up manually or the automated script doesn't work:
+
+#### 1. Clone All Repositories
+```bash
+# Clone the main repository
+git clone https://github.com/codestate-cs/code-state-ide.git
+cd code-state-ide
+
+# Clone dependencies (run from parent directory)
+cd ..
+git clone https://github.com/codestate-cs/code-state-library.git
+git clone https://github.com/codestate-cs/codestate-ui.git
 cd code-state-ide
 ```
 
-### 2. Install Dependencies
+#### 2. Build Dependencies
+```bash
+# Build code-state-library
+cd ../code-state-library
+npm install
+npm run build:core
+cd ../code-state-ide
+
+# Build codestate-ui
+cd ../codestate-ui
+npm install
+npm run build
+cd ../code-state-ide
+```
+
+#### 3. Install Main Project Dependencies
 ```bash
 npm install
 ```
 
-### 3. Build the Extension
+#### 4. Build the Extension
 ```bash
 npm run compile
 ```
 
-### 4. Run in Development Mode
-```bash
-npm run watch
+## 📁 Repository Structure
+
+After setup, your directory structure will look like this:
+
+```
+parent-directory/
+├── code-state-ide-v2/     # Main VS Code extension
+├── code-state-library/    # Core library and CLI
+└── codestate-ui/          # UI components
 ```
 
-### 5. Test the Extension
-1. Open VS Code
-2. Press `F5` or go to Run → Start Debugging
-3. This opens a new Extension Development Host window
-4. Test the extension in the new window
+## 🔧 Configuration Modes
+
+The project supports two configuration modes:
+
+### Development Mode (Default)
+- **Dependencies**: Local file references (`file:../code-state-library/packages/core`)
+- **Benefits**: Real-time development, instant changes, debugging
+- **Use Case**: Active development and testing
+
+### Production Mode
+- **Dependencies**: Published npm packages (`@codestate/core: ^1.0.9`)
+- **Benefits**: Stable, tested packages, marketplace-ready
+- **Use Case**: Building final VSIX packages
+
+### Switching Between Modes
+
+```bash
+# Switch to development mode
+./switch-config.sh dev
+npm install
+
+# Switch to production mode  
+./switch-config.sh prod
+npm install
+```
+
+## 🛠️ Available Scripts
+
+### Setup Scripts
+- `./setup-dev.sh` - Complete automated setup
+- `./switch-config.sh [dev|prod]` - Switch configuration modes
+
+### Development Scripts
+- `npm run dev` - Setup + watch mode (one command)
+- `npm run watch` - Start development mode
+- `npm run compile` - Build the extension
+- `npm run test` - Run tests
+
+### Production Scripts
+- `npm run package` - Build production VSIX
+- `npm run vscode:prepublish` - Prepare for publishing
+
+## 🔍 How It Works
+
+### Automated Setup Process
+1. **Clone Dependencies**: Automatically clones `code-state-library` and `codestate-ui`
+2. **Install Dependencies**: Runs `npm install` in each repository
+3. **Build Libraries**: Builds core library and UI components
+4. **Link Packages**: Creates symlinks for local development
+5. **Build Extension**: Compiles the main VS Code extension
+
+### Local Package Linking
+The setup creates symlinks in `node_modules/@codestate/` that point to your local repositories:
+- `node_modules/@codestate/core` → `../code-state-library/packages/core`
+- `node_modules/@codestate/ui` → `../codestate-ui`
+
+### Configuration Files
+- `package.json` - Current configuration (switched by scripts)
+- `package.dev.json` - Development configuration template
+- `package.prod.json` - Production configuration template
+
+## 🔄 Development Workflow
+
+### Starting Development
+1. Run `./setup-dev.sh` (first time only)
+2. Run `npm run watch`
+3. Press F5 in VS Code to test
+
+### Making Changes
+1. **Core Library Changes**: Edit files in `../code-state-library/packages/core`
+2. **UI Changes**: Edit files in `../codestate-ui`
+3. **Extension Changes**: Edit files in current directory
+4. Changes are automatically reflected (with watch mode)
+
+### Testing Changes
+1. **Unit Tests**: `npm test`
+2. **Extension Testing**: Press F5 in VS Code
+3. **Integration Testing**: Test in Extension Development Host
+
+### Building for Production
+1. Switch to production mode: `./switch-config.sh prod`
+2. Install dependencies: `npm install`
+3. Build package: `npm run package`
+
 
 ## 📁 Project Structure
 
@@ -244,19 +381,43 @@ This creates a `.vsix` file that can be:
 
 ## 🔍 Troubleshooting
 
+### Setup Script Issues
+```bash
+# Make sure scripts are executable
+chmod +x setup-dev.sh switch-config.sh
+
+# Run with verbose output
+bash -x setup-dev.sh
+```
+
+### Dependency Issues
+```bash
+# Clean and reinstall
+rm -rf node_modules package-lock.json
+npm install
+
+# Rebuild dependencies
+cd ../code-state-library && npm run build:core
+cd ../codestate-ui && npm run build
+cd ../code-state-ide-v2
+```
+
+### Symlink Issues
+```bash
+# Remove and recreate symlinks
+rm -rf node_modules/@codestate
+npm install
+```
+
 ### Build Issues
 ```bash
 # Clean and rebuild
 rm -rf dist/ resources/ui/
 npm run compile
-```
 
-### Dependency Issues
-```bash
-# Clear npm cache and reinstall
-npm cache clean --force
-rm -rf node_modules package-lock.json
-npm install
+# Clean build artifacts
+rm -rf dist/ out/
+npm run compile
 ```
 
 ### TypeScript Errors

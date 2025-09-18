@@ -92,6 +92,8 @@
     "check-types": "tsc --noEmit",
     "lint": "eslint src",
     "test": "vscode-test",
+    "setup-dev": "./setup-dev.sh",
+    "dev": "npm run setup-dev && npm run watch",
     "switch:dev": "./switch-config.sh dev",
     "switch:prod": "./switch-config.sh prod",
     "postinstall": "./setup-dev.sh"
@@ -111,7 +113,7 @@
     "typescript": "^5.8.3"
   },
   "dependencies": {
-    "@codestate/core": "^1.0.9",
-    "@codestate/ui": "^1.0.2"
+    "@codestate/core": "file:../code-state-library/packages/core",
+    "@codestate/ui": "file:../codestate-ui"
   }
 }
