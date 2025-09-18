@@ -1,182 +1,128 @@
 # CodeState IDE
 
-[![Version](https://img.shields.io/badge/version-0.0.1-blue.svg)](https://github.com/codestate-cs/codestate-ui)
+[![Version](https://img.shields.io/badge/version-1.2.0-blue.svg)](https://github.com/codestate-cs/code-state-ide)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![VS Code Marketplace](https://img.shields.io/badge/VS%20Code-Marketplace-blue.svg)](https://marketplace.visualstudio.com/items?itemName=karthikchinasani.codestate-ide)
 
-Development session management extension for Visual Studio Code and compatible IDEs (like Cursor, Codeium, etc.) that saves and restores your complete coding environment, including open files, terminal commands, scripts, and project state.
+**Save and restore your complete development environment** - never lose your coding context again! CodeState IDE automatically captures and restores your open files, terminal commands, scripts, and project state across sessions.
 
-## ✨ Features
+## 🎬 Demo
 
-- **💾 Session Management**: Save and restore complete development sessions with all your work
-- **📁 File State Preservation**: Remember open files, cursor positions, and scroll states
-- **🖥️ Terminal Command History**: Save and replay terminal commands and collections
-- **📜 Script Management**: Create, organize, and execute development scripts
-- **🌿 Git Integration**: Track git state, branches, commits, and stashes
-- **⚡ Fast Resume**: Quickly restore your entire development environment
-- **🎨 Beautiful UI**: Modern, intuitive interface that integrates seamlessly with VS Code
-- **📱 Activity Bar Integration**: Quick access to CodeState features from the sidebar
+![CodeState IDE Demo](https://github.com/codestate-cs/code-state-ide/assets/Codestate.gif)
 
-## 🚀 Installation
+*See CodeState IDE in action - saving and restoring your complete development environment*
 
-### Supported IDEs
+## ✨ What CodeState Does
 
-CodeState works with any VS Code-compatible IDE, including:
+### 💾 Complete Session Management
+- **Save Your Work**: Capture your entire development session with one click
+- **Instant Resume**: Restore all open files, cursor positions, and scroll states
+- **Never Lose Context**: Pick up exactly where you left off, even after restarting VS Code
+
+### 🖥️ Terminal Command History
+- **Save Terminal Sessions**: Automatically capture terminal commands and collections
+- **Replay Commands**: Execute saved command sequences with a single click
+- **Organize Scripts**: Create and manage development scripts for common tasks
+
+### 📁 Smart File Management
+- **Remember Everything**: Open files, tabs, and editor states are preserved
+- **Cursor Positions**: Exact cursor locations and scroll positions are saved
+- **Project Context**: Maintain awareness of your current working directory and git state
+
+### 🌿 Git Integration
+- **Track Git State**: Monitor branches, commits, and stashes
+- **Context Awareness**: Understand your project's git status at session save/restore
+- **Branch Management**: Seamlessly switch between different development contexts
+
+## 🚀 Getting Started
+
+### Installation
+1. Open VS Code
+2. Go to Extensions (`Ctrl+Shift+X` or `Cmd+Shift+X`)
+3. Search for "CodeState IDE"
+4. Click Install
+
+### Quick Start
+1. **Open CodeState**: Click the CodeState icon in the Activity Bar or use `Ctrl+Shift+P` → "Open CodeState"
+2. **Start Coding**: Begin your development work as usual
+3. **Save Session**: Use CodeState to save your current environment
+4. **Resume Later**: Restore your complete development context anytime
+
+## 🎯 How to Use
+
+### Saving Your Session
+- Click the CodeState icon in the Activity Bar
+- Use the "Save Session" option to capture your current state
+- Give your session a meaningful name for easy identification
+
+### Restoring Sessions
+- View all your saved sessions in the CodeState panel
+- Click on any session to instantly restore your complete environment
+- All files, terminals, and project state will be exactly as you left them
+
+### Managing Sessions
+- **Organize**: Group sessions by project or feature
+- **Delete**: Remove sessions you no longer need
+- **Rename**: Update session names for better organization
+
+## ⚙️ Configuration
+
+Access settings through the CodeState panel:
+- **Auto-save**: Automatically save sessions at regular intervals
+- **Session Limits**: Control how many sessions to keep
+- **File Filters**: Choose which files to include/exclude from sessions
+
+## 🎨 Features
+
+- **🎨 Beautiful Interface**: Modern, intuitive design that integrates seamlessly with VS Code
+- **📱 Activity Bar Integration**: Quick access from the sidebar
+- **⚡ Fast Performance**: Optimized for speed with minimal impact on VS Code
+- **🔒 Reliable**: Robust session management that won't lose your work
+- **🌐 Cross-Platform**: Works on Windows, macOS, and Linux
+
+## 💡 Use Cases
+
+### Daily Development
+- **Morning Setup**: Quickly restore yesterday's work environment
+- **Context Switching**: Move between different projects without losing progress
+- **Break Recovery**: Resume exactly where you left off after lunch or meetings
+
+### Project Management
+- **Feature Branches**: Save different development contexts for different features
+- **Bug Investigation**: Capture the exact state when investigating issues
+- **Code Reviews**: Share complete development environments with team members
+
+### Learning & Experimentation
+- **Tutorial Following**: Save progress while learning new technologies
+- **Experiment Tracking**: Capture different approaches and compare results
+- **Workshop Preparation**: Set up complete environments for coding workshops
+
+## 🛠️ Supported IDEs
+
+CodeState works with any VS Code-compatible IDE:
 - **Visual Studio Code** (primary)
 - **Cursor** (AI-powered VS Code fork)
 - **Codeium** (AI-powered VS Code fork)
 - **GitHub Codespaces** (browser-based VS Code)
 - **Any VS Code-based editor** that supports extensions
 
-### From VS Code Marketplace (Recommended)
+## 📊 What's New in v1.2.0
 
-1. Open VS Code
-2. Go to Extensions (`Ctrl+Shift+X` or `Cmd+Shift+X`)
-3. Search for "CodeState IDE"
-4. Click Install
-
-### From Source
-
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/codestate-cs/codestate-ui.git
-   cd codestate-ui
-   ```
-
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-
-3. Build the extension:
-   ```bash
-   npm run package
-   ```
-
-4. Install the `.vsix` file:
-   ```bash
-   code --install-extension codestate-ide-0.0.1.vsix
-   ```
-
-## 🎯 Usage
-
-### Quick Start
-
-1. **Open CodeState IDE**: Click the CodeState icon in the Activity Bar or use `Ctrl+Shift+P` and search for "Open CodeState"
-2. **Configure Settings**: Click the settings button to configure your IDE preferences
-3. **Start Coding**: Begin coding and experience AI-powered assistance
-
-### Commands
-
-- `CodeState: Open CodeState IDE` - Opens the main CodeState interface
-- Available in Command Palette (`Ctrl+Shift+P`)
-
-### Activity Bar
-
-The CodeState icon in the Activity Bar provides:
-- Quick access to open the IDE
-- Help and documentation links
-- Issue reporting and contribution links
-
-## ⚙️ Configuration
-
-Configure CodeState through the settings panel:
-
-- **IDE Selection**: Choose between VS Code and Cursor
-- **AI Model Settings**: Configure AI assistance preferences
-- **Analytics**: Enable/disable code analytics collection
-
-## 🛠️ Development
-
-### Prerequisites
-
-- Node.js 18+ 
-- npm or yarn
-- VS Code
-
-### Setup
-
-1. Clone and install dependencies:
-   ```bash
-   git clone https://github.com/codestate-cs/codestate-ui.git
-   cd codestate-ui
-   npm install
-   ```
-
-2. Build the extension:
-   ```bash
-   npm run package
-   ```
-
-3. Run in development mode:
-   ```bash
-   npm run watch
-   ```
-
-### Project Structure
-
-```
-├── src/                    # Extension source code
-│   ├── extension.ts        # Main extension entry point
-│   ├── webview/            # WebView providers
-│   ├── handlers/           # Message handlers
-│   ├── services/           # Background services
-│   └── utils/              # Utility functions
-├── resources/              # Static resources (icons, etc.)
-├── docs/                   # Documentation
-└── package.json            # Extension manifest
-```
-
-### Scripts
-
-- `npm run package` - Build production package
-- `npm run watch` - Build and watch for changes
-- `npm run check-types` - TypeScript type checking
-- `npm run lint` - ESLint code linting
-
-## 🤝 Contributing
-
-We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
-
-### How to Contribute
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-### Development Guidelines
-
-- Follow the existing code style
-- Add tests for new features
-- Update documentation as needed
-- Ensure all checks pass before submitting PR
-
-## 📝 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🐛 Bug Reports & Feature Requests
-
-- **Bug Reports**: [Create an issue](https://github.com/codestate-cs/codestate-ui/issues)
-- **Feature Requests**: [Start a discussion](https://github.com/codestate-cs/codestate-ui/discussions)
-- **Questions**: [Join discussions](https://github.com/codestate-cs/codestate-ui/discussions)
-
-## 🙏 Acknowledgments
-
-- Built with [VS Code Extension API](https://code.visualstudio.com/api)
-- UI powered by modern web technologies
-- Thanks to all contributors and the open-source community
-
-## 📊 Stats
-
-- **Package Size**: ~24KB (optimized for performance)
-- **Dependencies**: Minimal external dependencies
-- **Performance**: Fast startup and low memory usage
+- **✅ Improved Reliability**: Fixed extension activation issues
+- **✅ Better Performance**: Faster startup and resource management
+- **✅ Enhanced UI**: Smoother webview loading and interaction
+- **✅ Bug Fixes**: Resolved various stability issues
 
 ---
 
-**Made with ❤️ by the CodeState team**
+**Never lose your coding context again!** 
 
-[⭐ Star us on GitHub](https://github.com/codestate-cs/codestate-ui) | [📖 Documentation](https://github.com/codestate-cs/codestate-ui/wiki) | [🐛 Report Issues](https://github.com/codestate-cs/codestate-ui/issues)
+CodeState IDE makes development more efficient by eliminating the time spent recreating your perfect development environment. Focus on coding, not setup.
+
+## 👨‍💻 For Developers
+
+Want to contribute or set up the project locally? Check out our [Development Setup Guide](https://github.com/codestate-cs/code-state-ide/DEVELOPMENT.md) for comprehensive instructions on building, testing, and contributing to CodeState IDE.
+
+---
+
+[⭐ Star us on GitHub](https://github.com/codestate-cs/code-state-ide) | [🐛 Report Issues](https://github.com/codestate-cs/code-state-ide/issues) | [📖 Development Guide](DEVELOPMENT.md)

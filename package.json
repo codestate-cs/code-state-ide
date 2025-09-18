@@ -2,7 +2,7 @@
   "name": "codestate-ide",
   "displayName": "CodeState",
   "description": "Development session management extension for VS Code and compatible IDEs that saves and restores your coding environment, including open files, terminal commands, scripts, and project state",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "publisher": "karthikchinasani",
   "icon": "icon.png",
   "repository": {

@@ -21,7 +21,7 @@ We take security vulnerabilities seriously. If you discover a security vulnerabi
 Please report security vulnerabilities privately by:
 
 - **Email**: Send details to [security@codestate.dev](mailto:security@codestate.dev)
-- **GitHub Security Advisory**: Use GitHub's [private vulnerability reporting](https://github.com/codestate-cs/codestate-ui/security/advisories/new)
+- **GitHub Security Advisory**: Use GitHub's [private vulnerability reporting](https://github.com/codestate-cs/code-state-ide/security/advisories/new)
 
 ### 3. Include the following information
 
@@ -107,8 +107,8 @@ We credit security researchers who responsibly disclose vulnerabilities:
 ## Contact Information
 
 - **Security Email**: [security@codestate.dev](mailto:security@codestate.dev)
-- **General Support**: [GitHub Issues](https://github.com/codestate-cs/codestate-ui/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/codestate-cs/codestate-ui/discussions)
+- **General Support**: [GitHub Issues](https://github.com/codestate-cs/code-state-ide/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/codestate-cs/code-state-ide/discussions)
 
 ## Security Resources
 
