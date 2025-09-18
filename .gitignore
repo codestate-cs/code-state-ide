@@ -99,11 +99,10 @@ jspm_packages/
 tmp/
 temp/
 
-# Package lock files (keep package-lock.json for consistency)
-# package-lock.json
+# Package lock files (ignored for dynamic dependency management)
 
 # TypeScript cache
 *.tsbuildinfo
 
 # Local development symlinks
-node_modules/@codestate/
+node_modules
