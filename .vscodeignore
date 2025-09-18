@@ -15,11 +15,13 @@ tsconfig.json
 esbuild.js
 vsc-extension-quickstart.md
 .gitignore
+DEVELOPMENT.md
 
 # Source files (only include compiled dist/)
 src/
 test/
 out/
+assets/
 
 # Development dependencies and configs
 node_modules/

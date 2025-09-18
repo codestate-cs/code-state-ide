@@ -39,8 +39,8 @@ We welcome feature suggestions! Please:
 
 1. **Fork and Clone**
    ```bash
-   git clone https://github.com/YOUR_USERNAME/codestate-ui.git
-   cd codestate-ui
+git clone https://github.com/YOUR_USERNAME/code-state-ide.git
+cd code-state-ide
    ```
 
 2. **Install Dependencies**
@@ -206,7 +206,7 @@ refactor(utils): simplify helper functions
 
 1. **Open Extension Development Host**
    ```bash
-   code --extensionDevelopmentPath=/path/to/codestate-ui
+   code --extensionDevelopmentPath=/path/to/code-state-ide
    ```
 
 2. **Use Debug Console**
@@ -220,9 +220,9 @@ refactor(utils): simplify helper functions
 
 ## 📞 Getting Help
 
-- **Discussions**: [GitHub Discussions](https://github.com/codestate-cs/codestate-ui/discussions)
-- **Issues**: [GitHub Issues](https://github.com/codestate-cs/codestate-ui/issues)
-- **Documentation**: [Wiki](https://github.com/codestate-cs/codestate-ui/wiki)
+- **Discussions**: [GitHub Discussions](https://github.com/codestate-cs/code-state-ide/discussions)
+- **Issues**: [GitHub Issues](https://github.com/codestate-cs/code-state-ide/issues)
+- **Documentation**: [Wiki](https://github.com/codestate-cs/code-state-ide/wiki)
 
 ## 🎯 Project Goals
 

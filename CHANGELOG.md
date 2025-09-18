@@ -5,23 +5,41 @@ All notable changes to CodeState IDE will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+
+## [1.2.0] - 2024-09-18
 
 ### Added
 - Activity Bar webview with help and documentation links
 - Custom icon support for the extension
 - GitHub repository integration
 - Comprehensive documentation and contributing guidelines
+- Proper UI library bundling system
+- Automated UI file copying in build process
+- Auto-tagging system for releases
+- Complete CI/CD pipeline with automated publishing
+- User-focused README.md for VS Code marketplace
+- Comprehensive DEVELOPMENT.md for contributors
+- Demo GIF showcasing extension functionality
 
 ### Changed
 - Migrated from TreeView to WebView for Activity Bar
 - Updated package configuration for better marketplace integration
 - Optimized extension size and performance
+- Updated all repository URLs to correct GitHub repository
+- Improved webview resource loading system
+- UI library files now bundled in `resources/ui/` directory
+- Enhanced build system with automatic file copying
+- Restructured documentation for better user experience
 
 ### Fixed
+- **HTMLElement is not defined** error during extension activation
+- Webview UI library loading issues (401 Unauthorized errors)
+- Incorrect repository references in documentation
+- UI library bundling for packaged extensions
 - Configuration dialog loading issues
 - TypeScript compilation errors
 - Extension activation performance
+- Resource path resolution in webview context
 
 ## [0.0.1] - 2024-09-15
 
@@ -97,6 +115,6 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for information about contributing to thi
 
 ## Support
 
-- **Issues**: [GitHub Issues](https://github.com/codestate-cs/codestate-ui/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/codestate-cs/codestate-ui/discussions)
-- **Documentation**: [Wiki](https://github.com/codestate-cs/codestate-ui/wiki)
+- **Issues**: [GitHub Issues](https://github.com/codestate-cs/code-state-ide/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/codestate-cs/code-state-ide/discussions)
+- **Documentation**: [Wiki](https://github.com/codestate-cs/code-state-ide/wiki)
