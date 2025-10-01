@@ -40,6 +40,7 @@ export interface TerminalCollection {
 	lifecycle: LifecycleEvent[];
 	scriptReferences: ScriptReference[];
 	closeTerminalAfterExecution?: boolean;
+	executionMode?: "ide" | "same-terminal" | "multi-terminal";
 }
 export interface TerminalCollectionWithScripts {
 	id: string;
@@ -48,6 +49,7 @@ export interface TerminalCollectionWithScripts {
 	lifecycle: LifecycleEvent[];
 	scripts: Script[];
 	closeTerminalAfterExecution?: boolean;
+	executionMode?: "ide" | "same-terminal" | "multi-terminal";
 }
 export interface TerminalCollectionIndexEntry {
 	id: string;
@@ -271,6 +273,7 @@ export interface IScriptService {
 	getScripts(options?: {
 		rootPath?: string;
 		lifecycle?: LifecycleEvent;
+		ids?: string[];
 	}): Promise<Result<Script[]>>;
 	updateScript(id: string, script: Partial<Script>): Promise<Result<void>>;
 	deleteScripts(ids: string[]): Promise<Result<void>>;
@@ -288,6 +291,7 @@ export declare class GetScripts {
 	execute(options?: {
 		rootPath?: string;
 		lifecycle?: LifecycleEvent;
+		ids?: string[];
 	}): Promise<Result<Script[]>>;
 }
 export interface TerminalCommand {
@@ -296,6 +300,7 @@ export interface TerminalCommand {
 	cwd?: string;
 	env?: Record<string, string>;
 	timeout?: number;
+	closeAfterExecution?: boolean;
 }
 export interface TerminalResult {
 	success: boolean;
@@ -318,6 +323,11 @@ export interface ITerminalService {
 	spawnTerminal(command: string, options?: TerminalOptions): Promise<Result<boolean>>;
 	spawnTerminalCommand(command: TerminalCommand): Promise<Result<boolean>>;
 	spawnApplication(command: string, options?: TerminalOptions): Promise<Result<boolean>>;
+	spawnTerminalWithTabs(command: string, options?: TerminalOptions & {
+		title?: string;
+		useTabs?: boolean;
+		tabCommands?: string[];
+	}): Promise<Result<boolean>>;
 	getLastCommandsFromTerminals(): Promise<Result<TerminalCommandState[]>>;
 	isCommandAvailable(command: string): Promise<Result<boolean>>;
 	getShell(): Promise<Result<string>>;
@@ -732,6 +742,18 @@ export declare class ImportTerminalCollections {
 	private generateUniqueTerminalCollectionName;
 	private importScripts;
 }
+export interface OSInfo {
+	platform: string;
+	isLinux: boolean;
+	isMacOS: boolean;
+	isWindows: boolean;
+	supportsTerminalTabs: boolean;
+}
+export declare class GetOSInfo {
+	private osDetectionService;
+	constructor(logger?: ILoggerService);
+	execute(): Promise<Result<OSInfo>>;
+}
 export declare enum ErrorCode {
 	UNKNOWN = "UNKNOWN",
 	CONFIG_INVALID = "CONFIG_INVALID",
@@ -809,6 +831,11 @@ declare class TerminalFacade implements ITerminalService {
 	spawnTerminal(command: string, options?: TerminalOptions): Promise<Result<boolean>>;
 	spawnTerminalCommand(command: TerminalCommand): Promise<Result<boolean>>;
 	spawnApplication(command: string, options?: TerminalOptions): Promise<Result<boolean>>;
+	spawnTerminalWithTabs(command: string, options?: TerminalOptions & {
+		title?: string;
+		useTabs?: boolean;
+		tabCommands?: string[];
+	}): Promise<Result<boolean>>;
 	isCommandAvailable(command: string): Promise<Result<boolean>>;
 	getShell(): Promise<Result<string>>;
 	getLastCommandsFromTerminals(): Promise<Result<TerminalCommandState[]>>;
@@ -895,4 +922,4 @@ export {
 	TerminalFacade as Terminal,
 };
 
-export {};
+export { };

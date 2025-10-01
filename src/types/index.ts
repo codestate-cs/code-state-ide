@@ -2,7 +2,7 @@
 export const VSCODE_TYPES = {
   // UI Handshake
   UI_READY: 'codestate.ui.ready',
-  
+
   // Data Init Types
   SESSIONS_INIT: 'codestate.sessions.init',
   SESSIONS_INIT_RESPONSE: 'codestate.sessions.init.response',
@@ -12,8 +12,8 @@ export const VSCODE_TYPES = {
   TC_INIT_RESPONSE: 'codestate.tc.init.response',
   CONFIG_INIT: 'codestate.config.init',
   CONFIG_INIT_RESPONSE: 'codestate.config.init.response',
-  
-  
+
+
   // Session Types
   SESSION: {
     CREATE_INIT: 'codestate.sessions.create.init',
@@ -28,7 +28,7 @@ export const VSCODE_TYPES = {
     DELETE_RESPONSE: 'codestate.session.delete.response',
     RESUME_RESPONSE: 'codestate.session.resume.response'
   },
-  
+
   // Script Types
   SCRIPT: {
     CREATE: 'codestate.script.create',
@@ -41,7 +41,7 @@ export const VSCODE_TYPES = {
     DELETE_RESPONSE: 'codestate.script.delete.response',
     RESUME_RESPONSE: 'codestate.script.resume.response'
   },
-  
+
   // Terminal Collection Types
   TERMINAL_COLLECTION: {
     CREATE: 'codestate.terminal-collection.create',
@@ -54,7 +54,7 @@ export const VSCODE_TYPES = {
     DELETE_RESPONSE: 'codestate.terminal-collection.delete.response',
     RESUME_RESPONSE: 'codestate.terminal-collection.resume.response'
   },
-  
+
   // Config Types
   CONFIG: {
     UPDATE: 'codestate.config.update',

@@ -1,14 +1,17 @@
 import * as vscode from 'vscode';
 import { CodeStateService } from './CodeStateService';
+import { IDETerminalService } from './IDETerminalService';
 import { Logger } from '../utils/logger';
 
 export class AutoResumeService {
   private static instance: AutoResumeService;
   private codeStateService: CodeStateService;
+  private ideTerminalService: IDETerminalService;
   private logger: Logger;
 
   private constructor() {
     this.codeStateService = CodeStateService.getInstance();
+    this.ideTerminalService = IDETerminalService.getInstance();
     this.logger = Logger.getInstance('AutoResumeService');
   }
 
@@ -25,7 +28,7 @@ export class AutoResumeService {
   async autoResumeForCurrentWorkspace(): Promise<void> {
     try {
       this.logger.log('Starting auto-resume for current workspace');
-      
+
       // Get current workspace root
       const workspaceRoot = this.getCurrentWorkspaceRoot();
       if (!workspaceRoot) {
@@ -50,10 +53,10 @@ export class AutoResumeService {
       }
 
       const scriptsToResume = scriptsResult.value;
-      
+
       // Filter terminal collections manually (until service supports filtering)
-      const terminalCollectionsToResume = terminalCollectionsResult.value.filter(tc => 
-        tc.rootPath === workspaceRoot && 
+      const terminalCollectionsToResume = terminalCollectionsResult.value.filter(tc =>
+        tc.rootPath === workspaceRoot &&
         tc.lifecycle && tc.lifecycle.includes('open')
       );
 
@@ -78,11 +81,21 @@ export class AutoResumeService {
       for (const terminalCollection of terminalCollectionsToResume) {
         try {
           this.logger.log(`Auto-resuming terminal collection: ${terminalCollection.name}`);
-          const result = await this.codeStateService.getTerminalCollectionService().executeTerminalCollection(terminalCollection.id);
-          if (result.ok) {
-            this.logger.log(`Successfully auto-resumed terminal collection: ${terminalCollection.name}`);
+
+          // Check executionMode and execute accordingly
+          if (terminalCollection.executionMode === 'ide') {
+            this.logger.log(`Auto-resuming terminal collection "${terminalCollection.name}" in IDE mode`);
+            // Execute in IDE terminals
+            await this.ideTerminalService.executeTerminalCollection(terminalCollection);
+            this.logger.log(`Successfully auto-resumed terminal collection in IDE: ${terminalCollection.name}`);
           } else {
-            this.logger.log(`Failed to auto-resume terminal collection ${terminalCollection.name}: ${result.error.message}`);
+            // Use core library execution (existing behavior)
+            const result = await this.codeStateService.getTerminalCollectionService().executeTerminalCollection(terminalCollection.id);
+            if (result.ok) {
+              this.logger.log(`Successfully auto-resumed terminal collection: ${terminalCollection.name}`);
+            } else {
+              this.logger.log(`Failed to auto-resume terminal collection ${terminalCollection.name}: ${result.error.message}`);
+            }
           }
         } catch (error) {
           this.logger.log(`Error auto-resuming terminal collection ${terminalCollection.name}: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -104,7 +117,7 @@ export class AutoResumeService {
       if (!workspaceFolders || workspaceFolders.length === 0) {
         return null;
       }
-      
+
       // Use the first workspace folder as the root
       return workspaceFolders[0].uri.fsPath;
     } catch (error) {

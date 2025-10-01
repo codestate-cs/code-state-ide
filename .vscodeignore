@@ -5,6 +5,7 @@
 coverage/
 *.lcov
 .vscode-test/
+.vscode-test.mjs
 
 # Development files
 .github/
@@ -16,6 +17,13 @@ esbuild.js
 vsc-extension-quickstart.md
 .gitignore
 DEVELOPMENT.md
+LICENSE.txt
+SETUP-SUMMARY.md
+changelog.md
+package.dev.json
+package.prod.json
+setup-dev.sh
+switch-config.sh
 
 # Source files (only include compiled dist/)
 src/

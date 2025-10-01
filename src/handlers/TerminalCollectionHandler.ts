@@ -1,24 +1,27 @@
 import * as vscode from 'vscode';
 import { CodeStateService } from '../services/CodeStateService';
+import { IDETerminalService, TerminalCollection } from '../services/IDETerminalService';
 import { BaseHandler } from './BaseHandler';
-import { 
-  VSCODE_TYPES, 
-  RESPONSE_STATUS, 
-  MessageRequest, 
+import {
+  VSCODE_TYPES,
+  RESPONSE_STATUS,
+  MessageRequest,
   MessageResponse
 } from '../types';
 import { randomUUID } from 'crypto';
 
 export class TerminalCollectionHandler implements BaseHandler {
   private codeStateService: CodeStateService;
+  private ideTerminalService: IDETerminalService;
 
   constructor() {
     this.codeStateService = CodeStateService.getInstance();
+    this.ideTerminalService = IDETerminalService.getInstance();
   }
 
   canHandle(messageType: string): boolean {
     return messageType.startsWith('codestate.terminal-collection') ||
-           messageType === VSCODE_TYPES.TC_INIT;
+      messageType === VSCODE_TYPES.TC_INIT;
   }
 
   async handleMessage(message: MessageRequest, webview: vscode.Webview): Promise<void> {
@@ -28,23 +31,23 @@ export class TerminalCollectionHandler implements BaseHandler {
       case VSCODE_TYPES.TC_INIT:
         response = await this.handleTerminalCollectionsInit(message);
         break;
-      
+
       case VSCODE_TYPES.TERMINAL_COLLECTION.CREATE:
         response = await this.handleTerminalCollectionCreate(message);
         break;
-      
+
       case VSCODE_TYPES.TERMINAL_COLLECTION.UPDATE:
         response = await this.handleTerminalCollectionUpdate(message);
         break;
-      
+
       case VSCODE_TYPES.TERMINAL_COLLECTION.DELETE:
         response = await this.handleTerminalCollectionDelete(message);
         break;
-      
+
       case VSCODE_TYPES.TERMINAL_COLLECTION.RESUME:
         response = await this.handleTerminalCollectionResume(message);
         break;
-      
+
       default:
         return; // Don't handle unknown message types
     }
@@ -107,18 +110,22 @@ export class TerminalCollectionHandler implements BaseHandler {
       }
 
       const id = randomUUID();
-      
+
       // Use CodeStateService to create the terminal collection
-      const result = await this.codeStateService.getTerminalCollectionService().createTerminalCollection({
+      const terminalCollection: TerminalCollection = {
         id,
         name: terminalCollectionData.name,
         rootPath: terminalCollectionData.rootPath,
         lifecycle: terminalCollectionData.lifecycle || ['open'],
         scriptReferences: terminalCollectionData.scriptReferences,
-        closeTerminalAfterExecution: terminalCollectionData.closeTerminalAfterExecution || false
-      });
+        closeTerminalAfterExecution: terminalCollectionData.closeTerminalAfterExecution || false,
+        executionMode: terminalCollectionData.executionMode
+      };
+
+      const result = await this.codeStateService.getTerminalCollectionService().createTerminalCollection(terminalCollection as any);
 
       if (result.ok) {
+        console.log(`Terminal collection "${terminalCollectionData.name}" created with executionMode: ${terminalCollection.executionMode}`);
         vscode.window.showInformationMessage(`Terminal collection "${terminalCollectionData.name}" created successfully!`);
         return {
           type: VSCODE_TYPES.TERMINAL_COLLECTION.CREATE_RESPONSE,
@@ -215,11 +222,37 @@ export class TerminalCollectionHandler implements BaseHandler {
         };
       }
 
-      // Use CodeStateService to execute the terminal collection
-      const result = await this.codeStateService.getTerminalCollectionService().executeTerminalCollection(terminalCollectionId);
+      // Get terminal collection details to check executionMode
+      const terminalCollectionsResult = await this.codeStateService.getTerminalCollectionService().getTerminalCollections();
+      if (!terminalCollectionsResult.ok) {
+        vscode.window.showErrorMessage(`Failed to get terminal collection: ${terminalCollectionsResult.error.message}`);
+        return {
+          type: VSCODE_TYPES.TERMINAL_COLLECTION.RESUME_RESPONSE,
+          status: RESPONSE_STATUS.ERROR,
+          payload: { success: false, error: terminalCollectionsResult.error.message },
+          id: message.id
+        };
+      }
 
-      if (result.ok) {
-        vscode.window.showInformationMessage('Terminal collection resumed successfully!');
+      const terminalCollection = terminalCollectionsResult.value.find((tc: any) => tc.id === terminalCollectionId);
+      if (!terminalCollection) {
+        vscode.window.showErrorMessage('Terminal collection not found');
+        return {
+          type: VSCODE_TYPES.TERMINAL_COLLECTION.RESUME_RESPONSE,
+          status: RESPONSE_STATUS.ERROR,
+          payload: { success: false, error: 'Terminal collection not found' },
+          id: message.id
+        };
+      }
+
+      console.log('Terminal collection data:', JSON.stringify(terminalCollection, null, 2));
+
+      // Check executionMode and execute accordingly
+      if (terminalCollection.executionMode === 'ide') {
+        console.log(`Executing terminal collection "${terminalCollection.name}" in IDE mode`);
+        // Execute in IDE terminals
+        await this.ideTerminalService.executeTerminalCollection(terminalCollection);
+        vscode.window.showInformationMessage('Terminal collection resumed successfully in IDE!');
         return {
           type: VSCODE_TYPES.TERMINAL_COLLECTION.RESUME_RESPONSE,
           status: RESPONSE_STATUS.SUCCESS,
@@ -227,13 +260,26 @@ export class TerminalCollectionHandler implements BaseHandler {
           id: message.id
         };
       } else {
-        vscode.window.showErrorMessage(`Failed to resume terminal collection: ${result.error.message}`);
-        return {
-          type: VSCODE_TYPES.TERMINAL_COLLECTION.RESUME_RESPONSE,
-          status: RESPONSE_STATUS.ERROR,
-          payload: { success: false, error: result.error.message },
-          id: message.id
-        };
+        // Use CodeStateService to execute the terminal collection (existing behavior)
+        const result = await this.codeStateService.getTerminalCollectionService().executeTerminalCollection(terminalCollectionId);
+
+        if (result.ok) {
+          vscode.window.showInformationMessage('Terminal collection resumed successfully!');
+          return {
+            type: VSCODE_TYPES.TERMINAL_COLLECTION.RESUME_RESPONSE,
+            status: RESPONSE_STATUS.SUCCESS,
+            payload: { success: true, id: terminalCollectionId },
+            id: message.id
+          };
+        } else {
+          vscode.window.showErrorMessage(`Failed to resume terminal collection: ${result.error.message}`);
+          return {
+            type: VSCODE_TYPES.TERMINAL_COLLECTION.RESUME_RESPONSE,
+            status: RESPONSE_STATUS.ERROR,
+            payload: { success: false, error: result.error.message },
+            id: message.id
+          };
+        }
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
@@ -277,10 +323,16 @@ export class TerminalCollectionHandler implements BaseHandler {
         };
       }
 
+      // Ensure executionMode is preserved
+      const updateData = {
+        ...terminalCollectionData,
+        executionMode: terminalCollectionData.executionMode
+      };
+
       // Use CodeStateService to update the terminal collection
       const result = await this.codeStateService.getTerminalCollectionService().updateTerminalCollection(
         terminalCollectionId,
-        terminalCollectionData
+        updateData
       );
 
       if (result.ok) {
