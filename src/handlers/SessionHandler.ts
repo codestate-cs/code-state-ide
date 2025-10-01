@@ -3,10 +3,10 @@ import { CodeStateService } from '../services/CodeStateService';
 import { SessionDataCollector } from '../services/SessionDataCollector';
 import { GitValidationService } from '../services/GitValidationService';
 import { BaseHandler } from './BaseHandler';
-import { 
-  VSCODE_TYPES, 
-  RESPONSE_STATUS, 
-  MessageRequest, 
+import {
+  VSCODE_TYPES,
+  RESPONSE_STATUS,
+  MessageRequest,
   MessageResponse
 } from '../types';
 
@@ -22,8 +22,8 @@ export class SessionHandler implements BaseHandler {
   }
 
   canHandle(messageType: string): boolean {
-    return messageType.startsWith('codestate.session') || 
-           messageType === VSCODE_TYPES.SESSIONS_INIT;
+    return messageType.startsWith('codestate.session') ||
+      messageType === VSCODE_TYPES.SESSIONS_INIT;
   }
 
   async handleMessage(message: MessageRequest, webview: vscode.Webview): Promise<void> {
@@ -33,32 +33,32 @@ export class SessionHandler implements BaseHandler {
       case VSCODE_TYPES.SESSIONS_INIT:
         await this.handleSessionsInit(message, webview);
         return; // This method handles its own response via webview.postMessage
-      
+
       case VSCODE_TYPES.SESSION.CREATE_INIT:
-        await this.handleSessionCreateInit(message, webview);
-        return; // This method handles its own response via webview.postMessage
-      
+        response = await this.handleSessionCreateInit(message);
+        break;
+
       case VSCODE_TYPES.SESSION.CREATE:
         response = await this.handleSessionCreate(message);
         break;
-      
+
       case VSCODE_TYPES.SESSION.UPDATE:
         response = await this.handleSessionUpdate(message);
         break;
-      
+
       case VSCODE_TYPES.SESSION.DELETE:
         response = await this.handleSessionDelete(message);
         break;
-      
+
       case VSCODE_TYPES.SESSION.RESUME:
         response = await this.handleSessionResume(message);
         console.log('handleSessionResume response:', response);
         break;
-      
+
       case 'codestate.session.export':
         response = await this.handleSessionExport(message);
         break;
-      
+
       default:
         return; // Don't handle unknown message types
     }
@@ -73,16 +73,16 @@ export class SessionHandler implements BaseHandler {
   private async handleSessionsInit(message: MessageRequest, webview: vscode.Webview): Promise<void> {
     const result = await this.codeStateService.getSessionService().listSessions({ loadAll: true });
     console.log('handleSessionsInit', result);
-    
+
     // Get current workspace root
     const currentProjectRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || null;
     console.log('handleSessionsInit: currentProjectRoot:', currentProjectRoot);
-    
+
     if (result.ok) {
       webview.postMessage({
         type: VSCODE_TYPES.SESSIONS_INIT_RESPONSE,
         status: RESPONSE_STATUS.SUCCESS,
-        payload: { 
+        payload: {
           sessions: result.value,
           currentProjectRoot: currentProjectRoot
         },
@@ -101,19 +101,18 @@ export class SessionHandler implements BaseHandler {
   /**
    * Handle session create init - collect all session data
    */
-  private async handleSessionCreateInit(message: MessageRequest, webview: vscode.Webview): Promise<void> {
+  private async handleSessionCreateInit(message: MessageRequest): Promise<MessageResponse> {
     console.log('handleSessionCreateInit', message);
     try {
       // Get workspace root
       const workspaceFolders = vscode.workspace.workspaceFolders;
       if (!workspaceFolders || workspaceFolders.length === 0) {
-        webview.postMessage({
+        return {
           type: VSCODE_TYPES.SESSION.CREATE_INIT_RESPONSE,
           status: RESPONSE_STATUS.ERROR,
           payload: { error: 'No workspace folder found' },
           id: message.id
-        });
-        return;
+        };
       }
 
       const projectRoot = workspaceFolders[0].uri.fsPath;
@@ -121,28 +120,27 @@ export class SessionHandler implements BaseHandler {
       // Collect all session data
       const sessionDataResult = await this.sessionDataCollector.collectSessionData(projectRoot);
       if (!sessionDataResult.ok) {
-        webview.postMessage({
+        return {
           type: VSCODE_TYPES.SESSION.CREATE_INIT_RESPONSE,
           status: RESPONSE_STATUS.ERROR,
           payload: { error: sessionDataResult.error.message },
           id: message.id
-        });
-        return;
+        };
       }
 
-      webview.postMessage({
+      return {
         type: VSCODE_TYPES.SESSION.CREATE_INIT_RESPONSE,
         status: RESPONSE_STATUS.SUCCESS,
         payload: { sessionData: sessionDataResult.value },
         id: message.id
-      });
+      };
     } catch (error) {
-      webview.postMessage({
+      return {
         type: VSCODE_TYPES.SESSION.CREATE_INIT_RESPONSE,
         status: RESPONSE_STATUS.ERROR,
         payload: { error: error instanceof Error ? error.message : 'Unknown error occurred' },
         id: message.id
-      });
+      };
     }
   }
 
@@ -212,7 +210,7 @@ export class SessionHandler implements BaseHandler {
   private async handleSessionUpdate(message: MessageRequest): Promise<MessageResponse> {
     try {
       const { id, updates } = message.payload;
-      
+
       if (!id) {
         return {
           type: VSCODE_TYPES.SESSION.UPDATE_RESPONSE,
@@ -223,7 +221,7 @@ export class SessionHandler implements BaseHandler {
       }
 
       const result = await this.codeStateService.getSessionService().updateSession(id, updates);
-      
+
       if (result.ok) {
         vscode.window.showInformationMessage(`Session "${result.value.name}" updated successfully`);
         return {
@@ -259,7 +257,7 @@ export class SessionHandler implements BaseHandler {
   private async handleSessionDelete(message: MessageRequest): Promise<MessageResponse> {
     try {
       const { id } = message.payload;
-      
+
       if (!id) {
         return {
           type: VSCODE_TYPES.SESSION.DELETE_RESPONSE,
@@ -273,7 +271,7 @@ export class SessionHandler implements BaseHandler {
       // No need for VS Code confirmation dialog
 
       const result = await this.codeStateService.getSessionService().deleteSession(id);
-      
+
       if (result.ok) {
         vscode.window.showInformationMessage('Session deleted successfully');
         return {
@@ -309,7 +307,7 @@ export class SessionHandler implements BaseHandler {
   private async handleSessionResume(message: MessageRequest): Promise<MessageResponse> {
     try {
       const { id } = message.payload;
-      
+
       if (!id) {
         return {
           type: VSCODE_TYPES.SESSION.RESUME_RESPONSE,
@@ -355,8 +353,8 @@ export class SessionHandler implements BaseHandler {
       console.log('handleSessionResume: Session project root:', session.projectRoot);
 
       // Determine which path to use for git validation
-      const gitValidationPath = session.projectRoot === currentWorkspaceRoot 
-        ? currentWorkspaceRoot 
+      const gitValidationPath = session.projectRoot === currentWorkspaceRoot
+        ? currentWorkspaceRoot
         : session.projectRoot;
 
       console.log('handleSessionResume: Using git validation path:', gitValidationPath);
@@ -374,10 +372,10 @@ export class SessionHandler implements BaseHandler {
           if (gitExtension && gitExtension.isActive) {
             const git = gitExtension.exports.getAPI(1);
             const repository = git.getRepository(vscode.Uri.file(gitValidationPath));
-            
+
             if (repository && repository.state.HEAD?.name !== session.git.branch) {
               console.log(`handleSessionResume: Switching from ${repository.state.HEAD?.name} to ${session.git.branch}`);
-              
+
               // Checkout the session's branch
               await repository.checkout(session.git.branch);
               console.log(`handleSessionResume: Successfully switched to branch ${session.git.branch}`);
@@ -400,7 +398,7 @@ export class SessionHandler implements BaseHandler {
 
       // Now resume the session
       const result = await this.codeStateService.getSessionService().resumeSession(id);
-      
+
       if (result.ok) {
         vscode.window.showInformationMessage(`Session "${result.value.name}" resumed successfully`);
         return {
@@ -436,7 +434,7 @@ export class SessionHandler implements BaseHandler {
   private async handleSessionExport(message: MessageRequest): Promise<MessageResponse> {
     try {
       const { id } = message.payload;
-      
+
       if (!id) {
         return {
           type: 'codestate.session.export.response',
@@ -448,7 +446,7 @@ export class SessionHandler implements BaseHandler {
 
       // Get the session data
       const sessionsResult = await this.codeStateService.getSessionService().listSessions({ loadAll: true });
-      
+
       if (!sessionsResult.ok) {
         vscode.window.showErrorMessage(`Failed to get session data: ${sessionsResult.error.message}`);
         return {
@@ -460,7 +458,7 @@ export class SessionHandler implements BaseHandler {
       }
 
       const session = sessionsResult.value.find((s: any) => s.id === id);
-      
+
       if (!session) {
         vscode.window.showErrorMessage('Session not found');
         return {
@@ -494,13 +492,13 @@ export class SessionHandler implements BaseHandler {
       await vscode.workspace.fs.writeFile(uri, Buffer.from(sessionData, 'utf8'));
 
       vscode.window.showInformationMessage(`Session "${session.name}" exported successfully to ${uri.fsPath}`);
-      
+
       return {
         type: 'codestate.session.export.response',
         status: RESPONSE_STATUS.SUCCESS,
-        payload: { 
+        payload: {
           sessionId: id,
-          exportPath: uri.fsPath 
+          exportPath: uri.fsPath
         },
         id: message.id
       };

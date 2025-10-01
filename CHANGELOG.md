@@ -9,13 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- TBD
+- **🎯 IDE Execution Mode**: New execution mode option for terminal collections - terminals now open directly in VS Code IDE instead of external terminals
+- **🖥️ Native Terminal Integration**: Terminal collections can now execute commands in VS Code's built-in terminal with proper tab management
+- **⚡ Enhanced Terminal Management**: IDETerminalService provides seamless integration between CodeState and VS Code terminals
+- **🔄 Smart Execution Routing**: Automatic detection of execution mode (IDE vs external) for optimal user experience
+- **Unified Configuration Response**: OS information now included in config init response for simplified data loading
+- **Enhanced Debugging**: Comprehensive logging system for message handling and troubleshooting
+- **Development Build Support**: Added `copyUIFilesDev()` function for local UI development workflow
 
 ### Changed
-- TBD
+- **Terminal Execution Options**: Users can now choose between IDE-integrated terminals and external terminal execution
+- **Enhanced Auto-Resume**: Auto-resume service now supports both IDE and external terminal modes
+- **Simplified Architecture**: Removed separate OSInfoHandler - OS info now bundled with config data
+- **Consistent Message Handling**: Standardized response patterns across all handlers for better reliability
+- **Improved Code Quality**: Enhanced code formatting and consistency across all handler files
+- **Better Error Handling**: More robust error handling with detailed logging for debugging
 
 ### Fixed
-- TBD
+- **Session Create Init Response**: Fixed `codestate.sessions.create.init.response` not reaching UI due to inconsistent handler pattern
+- **Message Handler Reliability**: Improved message routing and handler discovery with better error reporting
+- **Response Consistency**: All handlers now follow the same response pattern for predictable behavior
 
 ## [1.2.1] - 2024-09-18
 

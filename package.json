@@ -2,7 +2,7 @@
   "name": "codestate-ide",
   "displayName": "CodeState",
   "description": "Development session management extension for VS Code and compatible IDEs that saves and restores your coding environment, including open files, terminal commands, scripts, and project state",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "publisher": "karthikchinasani",
   "icon": "icon.png",
   "repository": {
@@ -93,7 +93,7 @@
     "lint": "eslint src",
     "test": "vscode-test",
     "switch:dev": "./switch-config.sh dev",
-    "switch:prod": "./switch-config.sh prod && rm -rf node_modules package-lock.json"
+    "switch:prod": "./switch-config.sh prod"
   },
   "devDependencies": {
     "@types/mocha": "^10.0.10",
@@ -110,7 +110,7 @@
     "typescript": "^5.8.3"
   },
   "dependencies": {
-    "@codestate/core": "^1.0.9",
-    "@codestate/ui": "^1.0.2"
+    "@codestate/core": "^1.0.11",
+    "@codestate/ui": "^1.0.3"
   }
 }

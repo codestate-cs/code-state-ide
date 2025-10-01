@@ -5,10 +5,10 @@ import { ScriptHandler } from './ScriptHandler';
 import { TerminalCollectionHandler } from './TerminalCollectionHandler';
 import { ConfigHandler } from './ConfigHandler';
 import { UIHandler } from './UIHandler';
-import { 
-  VSCODE_TYPES, 
-  RESPONSE_STATUS, 
-  MessageRequest, 
+import {
+  VSCODE_TYPES,
+  RESPONSE_STATUS,
+  MessageRequest,
   MessageResponse
 } from '../types';
 
@@ -38,12 +38,17 @@ export class MessageHandler {
    */
   async handleMessage(message: MessageRequest, webview: vscode.Webview): Promise<void> {
     try {
+      console.log('MessageHandler: Handling message', message.type);
+
       // Find the appropriate handler
       const handler = this.handlers.find(h => h.canHandle(message.type));
-      
+
+      console.log('MessageHandler: Found handler for', message.type, handler ? handler.constructor.name : 'none');
+
       if (handler) {
         await handler.handleMessage(message, webview);
       } else {
+        console.log('MessageHandler: No handler found for message type:', message.type);
         // Handle unknown message types
         const errorResponse: MessageResponse = {
           type: message.type + '.response',
@@ -54,6 +59,7 @@ export class MessageHandler {
         webview.postMessage(errorResponse);
       }
     } catch (error) {
+      console.error('MessageHandler: Error handling message:', error);
       // Global error handling
       const errorResponse: MessageResponse = {
         type: message.type + '.response',

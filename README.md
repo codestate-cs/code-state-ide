@@ -23,6 +23,7 @@
 - **Save Terminal Sessions**: Automatically run commands that are needed when you open the vscode
 - **Replay Commands**: Execute saved command sequences with a single click
 - **Organize Scripts**: Create and manage development scripts for common tasks
+- **🎯 IDE Execution Mode**: Choose to run commands directly in VS Code's built-in terminal for seamless integration
 
 ### 📁 Smart File Management
 - **Remember Everything**: Open files, tabs, and editor states are preserved
@@ -65,6 +66,13 @@
 - **Delete**: Remove sessions you no longer need
 - **Rename**: Update session names for better organization
 
+### 🎯 IDE Execution Mode
+- **Native Integration**: Terminal collections run directly in VS Code's built-in terminal
+- **Tab Management**: Each script opens in its own named terminal tab for easy organization
+- **Seamless Experience**: No need to switch between external terminals and VS Code
+- **Auto-Resume**: Terminal collections with IDE execution mode automatically resume in VS Code terminals
+- **Flexible Options**: Choose between IDE-integrated terminals or external terminal execution based on your preference
+
 ## 🎨 Features
 
 - **🎨 Beautiful Interface**: Modern, intuitive design that integrates seamlessly with VS Code
@@ -99,12 +107,16 @@ CodeState works with any VS Code-compatible IDE:
 - **GitHub Codespaces** (browser-based VS Code)
 - **Any VS Code-based editor** that supports extensions
 
-## 📊 What's New in v1.2.1
+## 📊 What's New in Latest Version
 
-- **✅ Improved Reliability**: Fixed extension activation issues
-- **✅ Better Performance**: Faster startup and resource management
-- **✅ Enhanced UI**: Smoother webview loading and interaction
-- **✅ Bug Fixes**: Resolved various stability issues
+- **🎯 IDE Execution Mode**: Choose to run terminal commands directly in VS Code's built-in terminal instead of external terminals
+- **🖥️ Native Terminal Integration**: Terminal collections now open as native VS Code terminal tabs with proper naming and organization
+- **⚡ Enhanced Terminal Management**: Seamless integration between CodeState and VS Code's terminal system
+- **✅ Unified Data Loading**: OS information now included in configuration response for faster initialization
+- **✅ Enhanced Reliability**: Fixed message handling inconsistencies that prevented some responses from reaching the UI
+- **✅ Better Debugging**: Comprehensive logging system for easier troubleshooting and development
+- **✅ Improved Architecture**: Simplified handler system with consistent response patterns
+- **✅ Development Tools**: Added local UI development workflow support
 
 ---
 
